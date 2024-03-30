@@ -65,10 +65,10 @@ exclude = [
 include-package-data = true
 
 [tool.setuptools.package-data]
-generate-sequences = ["py.typed"]
+generate_sequences = ["py.typed"]
 
 [tool.setuptools.dynamic]
-version = {attr = "generate-sequences.version.VERSION"}
+version = {attr = "generate_sequences.version.VERSION"}
 
 [tool.black]
 line-length = 100
