@@ -129,6 +129,7 @@ jobs:
         with:
           name: package
           path: dist
+          github-token: ${{ secrets.WORKFLOW_TOKEN }}
 
       - name: Generate release notes
         run: |
