@@ -1,23 +1,23 @@
 Installation
 ============
 
-**my-package** supports Python >= 3.8.
+**generate** supports Python >= 3.8.
 
 ## Installing with `pip`
 
-**my-package** is available [on PyPI](https://pypi.org/project/my-package/). Just run
+**generate** is available [on PyPI](https://pypi.org/project/generate/). Just run
 
 ```bash
-pip install my-package
+pip install generate
 ```
 
 ## Installing from source
 
-To install **my-package** from source, first clone [the repository](https://github.com/allenai/python-package-template):
+To install **generate** from source, first clone [the repository](https://github.com/MagedSaeed/generate):
 
 ```bash
-git clone https://github.com/allenai/python-package-template.git
-cd python-package-template
+git clone https://github.com/MagedSaeed/generate.git
+cd generate
 ```
 
 Then run
