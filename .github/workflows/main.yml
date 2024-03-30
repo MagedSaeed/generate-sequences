@@ -97,7 +97,7 @@ jobs:
         if: always()
         run: |
           . .venv/bin/activate
-          pip uninstall -y generate
+          pip uninstall -y generate-sequences
 
   release:
     name: Release
@@ -131,7 +131,7 @@ jobs:
           path: dist
           github-token: ${{ secrets.WORKFLOW_TOKEN }}
 
-      - name: Generate release notes
+      - name: generate-sequences release notes
         run: |
           python scripts/release_notes.py > ${{ github.workspace }}-RELEASE_NOTES.md
 

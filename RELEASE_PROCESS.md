@@ -2,7 +2,7 @@
 
 ## Steps
 
-1. Update the version in `generate/version.py`.
+1. Update the version in `generate-sequences/version.py`.
 
 3. Run the release script:
 

@@ -1,4 +1,4 @@
-# **generate**
+# **generate-sequences**
 
 ```{toctree}
 :maxdepth: 2
@@ -15,8 +15,8 @@ overview
 
 CHANGELOG
 CONTRIBUTING
-License <https://raw.githubusercontent.com/allenai/generate/main/LICENSE>
-GitHub Repository <https://github.com/MagedSaeed/generate>
+License <https://raw.githubusercontent.com/allenai/generate-sequences/main/LICENSE>
+GitHub Repository <https://github.com/MagedSaeed/generate-sequences>
 ```
 
 ## Indices and tables

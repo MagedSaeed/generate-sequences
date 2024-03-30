@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 # See https://setuptools.pypa.io/en/latest/userguide/quickstart.html for more project configuration options.
-name = "generate"
+name = "generate-sequences"
 dynamic = ["version"]
 readme = "README.md"
 classifiers = [
@@ -24,10 +24,10 @@ dependencies = [
 license = {file = "LICENSE"}
 
 [project.urls]
-Homepage = "https://github.com/MagedSaeed/generate"
-Repository = "https://github.com/MagedSaeed/generate"
-Changelog = "https://github.com/MagedSaeed/generate/blob/main/CHANGELOG.md"
-# Documentation = "https://generate.readthedocs.io/"
+Homepage = "https://github.com/MagedSaeed/generate-sequences"
+Repository = "https://github.com/MagedSaeed/generate-sequences"
+Changelog = "https://github.com/MagedSaeed/generate-sequences/blob/main/CHANGELOG.md"
+# Documentation = "https://generate-sequences.readthedocs.io/"
 
 [project.optional-dependencies]
 dev = [
@@ -65,10 +65,10 @@ exclude = [
 include-package-data = true
 
 [tool.setuptools.package-data]
-generate = ["py.typed"]
+generate-sequences = ["py.typed"]
 
 [tool.setuptools.dynamic]
-version = {attr = "generate.version.VERSION"}
+version = {attr = "generate-sequences.version.VERSION"}
 
 [tool.black]
 line-length = 100
