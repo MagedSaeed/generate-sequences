@@ -71,7 +71,7 @@ generate_sequences = ["py.typed"]
 version = { attr = "generate_sequences.version.VERSION" }
 
 [tool.black]
-line-length = 88
+line-length = 100
 include = '\.pyi?$'
 exclude = '''
 (
