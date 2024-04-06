@@ -1,4 +1,5 @@
 from typing import Callable, Iterator, List, Union
+
 import torch
 from tqdm.auto import tqdm
 

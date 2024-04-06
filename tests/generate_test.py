@@ -1,8 +1,8 @@
-from generate_sequences.generate import GreedyGenerator
-
-import evaluate
 import datasets
-from transformers import MarianTokenizer, MarianMTModel
+import evaluate
+from transformers import MarianMTModel, MarianTokenizer
+
+from generate_sequences.generate import GreedyGenerator
 
 mname = "marefa-nlp/marefa-mt-en-ar"
 tokenizer = MarianTokenizer.from_pretrained(mname)
