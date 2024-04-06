@@ -16,9 +16,7 @@ test_dataset = datasets.load_dataset("iwslt2017", "iwslt2017-ar-en", split="test
 source_language = "en"
 target_language = "ar"
 
-input_texts = [example[source_language] for example in test_dataset["translation"]][
-    -10:
-]
+input_texts = [example[source_language] for example in test_dataset["translation"]][-10:]
 targets = [example[target_language] for example in test_dataset["translation"]][-10:]
 
 # Initialize GreedyGenerator
