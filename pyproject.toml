@@ -8,20 +8,21 @@ name = "generate-sequences"
 dynamic = ["version"]
 readme = "README.md"
 classifiers = [
-    "Intended Audience :: Science/Research",
-    "Development Status :: 3 - Alpha",
-    "License :: OSI Approved :: Apache Software License",
-    "Programming Language :: Python :: 3",
-    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+  "Intended Audience :: Science/Research",
+  "Development Status :: 3 - Alpha",
+  "License :: OSI Approved :: Apache Software License",
+  "Programming Language :: Python :: 3",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
-authors = [
-    {name = "Maged S. Al-Shaibani", email = "mageedsaeed1@gmail.com"}
-]
+authors = [{ name = "Maged S. Al-Shaibani", email = "mageedsaeed1@gmail.com" }]
 requires-python = ">=3.8"
 dependencies = [
   # Add your own dependencies here
+  "tqdm==4.66.*",
+  "numpy==1.26.*",
+  "torch==2.2.*",
 ]
-license = {file = "LICENSE"}
+license = { file = "LICENSE" }
 
 [project.urls]
 Homepage = "https://github.com/MagedSaeed/generate-sequences"
@@ -31,35 +32,34 @@ Changelog = "https://github.com/MagedSaeed/generate-sequences/blob/main/CHANGELO
 
 [project.optional-dependencies]
 dev = [
-    "ruff",
-    "mypy>=1.0,<1.10",
-    "black>=23.0,<25.0",
-    "isort>=5.12,<5.14",
-    "pytest",
-    "pytest-sphinx",
-    "pytest-cov",
-    "twine>=1.11.0",
-    "build",
-    "setuptools",
-    "wheel",
-    "Sphinx>=4.3.0,<7.3.0",
-    "furo==2024.1.29",
-    "myst-parser>=1.0,<2.1",
-    "sphinx-copybutton==0.5.2",
-    "sphinx-autobuild==2021.3.14",
-    "sphinx-autodoc-typehints==2.0.0",
-    "packaging"
+  "ruff",
+  "mypy>=1.0,<1.10",
+  "black>=23.0,<25.0",
+  "isort>=5.12,<5.14",
+  "pytest",
+  "pytest-sphinx",
+  "pytest-cov",
+  "twine>=1.11.0",
+  "build",
+  "setuptools",
+  "wheel",
+  "Sphinx>=4.3.0,<7.3.0",
+  "furo==2024.1.29",
+  "myst-parser>=1.0,<2.1",
+  "sphinx-copybutton==0.5.2",
+  "sphinx-autobuild==2021.3.14",
+  "sphinx-autodoc-typehints==2.0.0",
+  "packaging",
+  # added for testing
+  "evaluate==0.4.*",
+  "sacrebleu==2.4.*",
+  "sacremoses==0.1.*",
+  "sentencepiece==0.2.*",
+  "transformers==4.39.*",
 ]
 
 [tool.setuptools.packages.find]
-exclude = [
-    "*.tests",
-    "*.tests.*",
-    "tests.*",
-    "tests",
-    "docs*",
-    "scripts*"
-]
+exclude = ["*.tests", "*.tests.*", "tests.*", "tests", "docs*", "scripts*"]
 
 [tool.setuptools]
 include-package-data = true
@@ -68,10 +68,10 @@ include-package-data = true
 generate_sequences = ["py.typed"]
 
 [tool.setuptools.dynamic]
-version = {attr = "generate_sequences.version.VERSION"}
+version = { attr = "generate_sequences.version.VERSION" }
 
 [tool.black]
-line-length = 100
+line-length = 88
 include = '\.pyi?$'
 exclude = '''
 (
@@ -112,9 +112,6 @@ strict_optional = false
 
 [tool.pytest.ini_options]
 testpaths = "tests/"
-python_classes = [
-  "Test*",
-  "*Test"
-]
+python_classes = ["Test*", "*Test"]
 log_format = "%(asctime)s - %(levelname)s - %(name)s - %(message)s"
 log_level = "DEBUG"
