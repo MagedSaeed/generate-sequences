@@ -1,0 +1,27 @@
+repos:
+  - repo: https://github.com/charliermarsh/ruff-pre-commit
+    rev: 'v0.3.5'  # Use the latest revision
+    hooks:
+      - id: ruff
+
+  - repo: https://github.com/psf/black-pre-commit-mirror
+    rev: '24.3.0'
+    hooks:
+      - id: black
+        # It is recommended to specify the latest version of Python
+        # supported by your project here, or alternatively use
+        # pre-commit's default_language_version, see
+        # https://pre-commit.com/#top_level-default_language_version
+        language_version: python3
+
+  - repo: https://github.com/pre-commit/mirrors-isort
+    rev: 'v5.10.1'  # Use the latest revision
+    hooks:
+      - id: isort
+        additional_dependencies: [toml]  # Add this if your project uses pyproject.toml for isort configuration
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: 'v1.9.0'  # Use the latest revision
+    hooks:
+      - id: mypy
+        additional_dependencies: [types-requests, types-setuptools]  # Example: include these if you're using requests or setuptools in your project
