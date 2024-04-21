@@ -200,7 +200,7 @@ class BeamSearchGenerator(BaseGenerator):
                         beam_nodes_ordering_function=self.beam_nodes_ordering_function,
                     )
                     for _ in range(len(batch))
-                ]  # Initialize here
+                ]
                 best_beams_nodes = [beam.get_topk() for beam in beams]
                 for k in range(
                     len(best_beams_nodes[0])
@@ -212,7 +212,7 @@ class BeamSearchGenerator(BaseGenerator):
                     outputs = self.sample_tokens_probs(outputs)
                     topk_scores, topk_indices = torch.topk(outputs, self.beam_width)
                     for beam_index, beam in enumerate(next_beams):
-                        # Check if this sequence has already reached <eos>
+                        # Check if this sequence has already reached eos token
                         if best_beams_nodes[beam_index][k].tokens[-1] == self.eos_token_id:
                             beam.add(
                                 BeamNode(
