@@ -2,7 +2,9 @@
 
 ## Steps
 
-1. Update the version in `generate-sequences/version.py`.
+1. update release changes to CHAGELOG.
+
+2. Update the version in `generate-sequences/version.py`.
 
 3. Run the release script:
 
