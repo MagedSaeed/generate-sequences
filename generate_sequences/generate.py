@@ -19,6 +19,7 @@ class BaseGenerator:
         max_length: int = 1_024,
         batch_size: int = 1,
         device: str = "cuda",
+        temperature: float = 1.0,
         use_tqdm: bool = True,
     ) -> None:
         self.device = device
@@ -28,6 +29,7 @@ class BaseGenerator:
         self.generate_fn = generate_fn
         self.eos_token_id = eos_token_id
         self.decoder_start_token_id = decoder_start_token_id
+        self.temperature = temperature
 
     def get_batches(self, inputs: Union[List[torch.Tensor], List[str]]) -> Iterator[List[str]]:
         for i in tqdm(
@@ -69,6 +71,7 @@ class GreedyGenerator(BaseGenerator):
                     break  # Stop if all sequences are finished
                 batch_outputs = self.generate_fn(batch_inputs, decoder_inputs[:, :step])
                 batch_outputs = batch_outputs[:, -1, :]  # Get last tokens' outputs for the batch
+                batch_outputs = batch_outputs / self.temperature
                 next_tokens = self.sample_tokens_probs(batch_outputs)
                 not_finished = ~finished_mask
                 decoder_inputs[not_finished, step] = next_tokens[not_finished]
@@ -144,6 +147,7 @@ class BeamSearchGenerator(BaseGenerator):
         max_length: int = 1_024,
         batch_size: int = 1,
         device: str = "cuda",
+        temperature: float = 1.0,
         use_tqdm: bool = True,
         beam_width: int = 4,
         length_penalty_alpha: float = 1.0,
@@ -159,6 +163,7 @@ class BeamSearchGenerator(BaseGenerator):
             max_length,
             batch_size,
             device,
+            temperature,
             use_tqdm,
         )
         self.beam_width = beam_width
@@ -209,6 +214,7 @@ class BeamSearchGenerator(BaseGenerator):
                         [topk_nodes[k].tokens for topk_nodes in best_beams_nodes]
                     ).to(self.device)
                     outputs = self.generate_fn(batch, decoder_input_ids)
+                    outputs = outputs / self.temperature
                     outputs = self.sample_tokens_probs(outputs)
                     topk_scores, topk_indices = torch.topk(outputs, self.beam_width)
                     for beam_index, beam in enumerate(next_beams):
