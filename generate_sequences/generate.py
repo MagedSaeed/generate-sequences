@@ -1,5 +1,6 @@
 import heapq
 from typing import Callable, Iterator, List, Union
+import warnings
 
 import torch
 import torch.nn.functional as F
@@ -40,20 +41,15 @@ class BaseGenerator:
         ):
             yield inputs[i : i + self.batch_size]
 
-    def sample_tokens_probs(
-        self,
-        outputs: torch.Tensor,
-    ) -> torch.Tensor:
-        outputs = torch.log(outputs)
-        outputs = outputs / self.temperature
-        outputs = F.softmax(outputs, dim=-1)
-        return outputs
-
 
 class GreedyGenerator(BaseGenerator):
     @torch.no_grad()
     def generate(self, inputs: Union[List[torch.Tensor], List[str]]) -> List[torch.Tensor]:
         outputs = []
+        # add user warning if temperature is not 1.0 that greedy search is not appropriate
+        if self.temperature != 1.0:
+            warnings.warn("Temperature does not have an affect on Greedy search!")
+
         for batch_inputs in self.get_batches(inputs):
             batch_size = len(batch_inputs)
             decoder_inputs = torch.full(
@@ -70,12 +66,13 @@ class GreedyGenerator(BaseGenerator):
                     break  # Stop if all sequences are finished
                 batch_outputs = self.generate_fn(batch_inputs, decoder_inputs[:, :step])
                 batch_outputs = batch_outputs[:, -1, :]  # Get last tokens' outputs for the batch
-                next_tokens = self.sample_tokens_probs(batch_outputs)
+                next_tokens = batch_outputs / self.temperature
+                next_tokens = F.softmax(next_tokens, dim=-1)
                 next_tokens = torch.argmax(next_tokens, dim=-1)
                 not_finished = ~finished_mask
                 decoder_inputs[not_finished, step] = next_tokens[not_finished]
                 finished_mask |= next_tokens == self.eos_token_id  # Update finished sequences
-            outputs.extend(decoder_inputs)
+            outputs += decoder_inputs
         return outputs
 
 
@@ -210,7 +207,8 @@ class BeamSearchGenerator(BaseGenerator):
                     ).to(self.device)
                     batch_outputs = self.generate_fn(batch, decoder_input_ids)
                     batch_outputs = batch_outputs[:, -1, :]
-                    batch_outputs = self.sample_tokens_probs(batch_outputs)
+                    batch_outputs = batch_outputs / self.temperature
+                    batch_outputs = F.log_softmax(batch_outputs, dim=-1)
                     topk_scores, topk_indices = torch.topk(batch_outputs, self.beam_width)
                     for beam_index, beam in enumerate(next_beams):
                         # Check if this sequence has already reached eos token
