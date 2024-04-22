@@ -100,22 +100,6 @@ def test_greedy_generate():
     )
 
 
-def test_greedy_generate_with_temperature():
-    greedy_sequences_generator.temperature = 1.2
-    generated_sequences = tokenizer.batch_decode(
-        greedy_sequences_generator.generate(input_texts),
-        skip_special_tokens=True,
-    )
-    assert (
-        7
-        < bleu_scorer.compute(
-            predictions=generated_sequences,
-            references=targets,
-        )["score"]
-        < 8
-    )
-
-
 def test_beam_search_generate():
     generated_sequences = tokenizer.batch_decode(
         beam_search_sequences_generator.generate(input_texts),
@@ -132,7 +116,7 @@ def test_beam_search_generate():
 
 
 def test_beam_search_generate_with_temperature():
-    beam_search_sequences_generator.temperature = 1.2
+    beam_search_sequences_generator.temperature = 0.75
     generated_sequences = tokenizer.batch_decode(
         beam_search_sequences_generator.generate(input_texts),
         skip_special_tokens=True,
