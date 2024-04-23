@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [v0.0.3](https://github.com/MagedSaeed/generate-sequences/releases/tag/v0.0.1) - 2024-04-23
+
+### Added
+
+- Add temperature parameter for beam search generation.
+- Add tests for temperature parameter.
+- Add documentation when needed.
+
+### Changed
+- `length_penalty_alpha` parameter of beam search has been changed to `length_penalty`.
+- Update the hf_compare notebook to reflect the new changes.
+
+### Removed
+- Remove the function `sample_tokens_probs` and replace its code in the `generate` method for each algorithm.
+- Remove `minimum_penalty_tokens_length` from beam search generation.
+
 ## [v0.0.2](https://github.com/MagedSaeed/generate-sequences/releases/tag/v0.0.1) - 2024-04-21
 
 ### Added
