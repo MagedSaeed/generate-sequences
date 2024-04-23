@@ -1,6 +1,6 @@
 import heapq
-from typing import Callable, Iterator, List, Union
 import warnings
+from typing import Callable, Iterator, List, Union
 
 import torch
 import torch.nn.functional as F
@@ -105,7 +105,7 @@ class Beam:
         beam_width: int = 4,
         length_penalty: float = 1.0,
         beam_nodes_ordering_function: Callable[
-            [BeamNode, int, float, int], float
+            [BeamNode, int, float], float
         ] = default_beam_nodes_ordering_fn,
     ):
         self.nodes: List[BeamNode] = []
@@ -152,7 +152,7 @@ class BeamSearchGenerator(BaseGenerator):
         beam_width: int = 4,
         length_penalty: float = 1.0,
         beam_nodes_ordering_function: Callable[
-            [BeamNode, int, float, int], float
+            [BeamNode, int, float], float
         ] = default_beam_nodes_ordering_fn,
     ) -> None:
         super().__init__(
@@ -215,7 +215,8 @@ class BeamSearchGenerator(BaseGenerator):
                         if best_beams_nodes[beam_index][k].tokens[-1] == self.eos_token_id:
                             beam.add(
                                 BeamNode(
-                                    tokens=best_beams_nodes[beam_index][k].tokens + [self.eos_token_id],
+                                    tokens=best_beams_nodes[beam_index][k].tokens
+                                    + [self.eos_token_id],
                                     score=0,
                                 )
                             )
