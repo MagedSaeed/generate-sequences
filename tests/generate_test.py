@@ -74,12 +74,11 @@ greedy_sequences_generator = GreedyGenerator(
 # Initialize BeamSearchGenerator
 beam_search_sequences_generator = BeamSearchGenerator(
     use_tqdm=True,
+    length_penalty=0.6,
     device=model.device,
     max_length=MAX_LENGTH,
-    length_penalty_alpha=0.6,
-    generate_fn=hf_generate_fn,
-    minimum_penalty_tokens_length=5,
     batch_size=BATCH_SIZE,
+    generate_fn=hf_generate_fn,
     eos_token_id=model.generation_config.eos_token_id,
     decoder_start_token_id=model.generation_config.decoder_start_token_id,
 )
@@ -102,6 +101,22 @@ def test_greedy_generate():
 
 
 def test_beam_search_generate():
+    generated_sequences = tokenizer.batch_decode(
+        beam_search_sequences_generator.generate(input_texts),
+        skip_special_tokens=True,
+    )
+    assert (
+        14
+        < bleu_scorer.compute(
+            predictions=generated_sequences,
+            references=targets,
+        )["score"]
+        < 15
+    )
+
+
+def test_beam_search_generate_with_temperature():
+    beam_search_sequences_generator.temperature = 0.75
     generated_sequences = tokenizer.batch_decode(
         beam_search_sequences_generator.generate(input_texts),
         skip_special_tokens=True,
