@@ -160,6 +160,7 @@ class BeamSearchGenerator(BaseGenerator):
         device: str = "cuda",
         temperature: float = 1.0,
         use_tqdm: bool = True,
+        multinomial_sampling: bool = False,
         beam_width: int = 4,
         length_penalty: float = 1.0,
         beam_nodes_ordering_function: Callable[
@@ -175,6 +176,7 @@ class BeamSearchGenerator(BaseGenerator):
             device,
             temperature,
             use_tqdm,
+            multinomial_sampling,
         )
         self.beam_width = beam_width
         self.length_penalty = length_penalty
@@ -220,7 +222,16 @@ class BeamSearchGenerator(BaseGenerator):
                     batch_outputs = batch_outputs[:, -1, :]
                     batch_outputs = batch_outputs / self.temperature
                     batch_outputs = F.log_softmax(batch_outputs, dim=-1)
-                    topk_scores, topk_indices = torch.topk(batch_outputs, self.beam_width)
+                    # check for multinomial sampling
+                    if self.multinomial_sampling:
+                        topk_indices = torch.multinomial(
+                            torch.exp(batch_outputs),
+                            self.beam_width,
+                            replacement=True,
+                        )
+                        topk_scores = batch_outputs.gather(1, topk_indices)
+                    else:
+                        topk_scores, topk_indices = torch.topk(batch_outputs, self.beam_width)
                     for beam_index, beam in enumerate(next_beams):
                         # Check if this sequence has already reached eos token
                         if best_beams_nodes[beam_index][k].tokens[-1] == self.eos_token_id:
