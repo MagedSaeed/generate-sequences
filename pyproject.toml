@@ -20,7 +20,7 @@ dependencies = [
   # Add your own dependencies here
   "tqdm==4.66.*",
   "numpy>=1.24.0",
-  "torch==2.2.*",
+  "torch>=2.2,<2.4",
 ]
 license = { file = "LICENSE" }
 
