@@ -3,8 +3,6 @@ from pathlib import Path
 
 from generate_sequences.version import VERSION
 
-print(VERSION)
-
 
 def main():
     changelog = Path("CHANGELOG.md")
