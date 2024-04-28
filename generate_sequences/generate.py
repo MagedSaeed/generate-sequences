@@ -22,6 +22,7 @@ class BaseGenerator:
         device: str = "cuda",
         temperature: float = 1.0,
         use_tqdm: bool = True,
+        multinomial_sampling: bool = False,
     ) -> None:
         self.device = device
         self.use_tqdm = use_tqdm
@@ -31,6 +32,7 @@ class BaseGenerator:
         self.eos_token_id = eos_token_id
         self.decoder_start_token_id = decoder_start_token_id
         self.temperature = temperature
+        self.multinomial_sampling = multinomial_sampling
 
     def get_batches(self, inputs: Union[List[torch.Tensor], List[str]]) -> Iterator[List[str]]:
         for i in tqdm(
@@ -47,8 +49,10 @@ class GreedyGenerator(BaseGenerator):
     def generate(self, inputs: Union[List[torch.Tensor], List[str]]) -> List[torch.Tensor]:
         outputs = []
         # add user warning if temperature is not 1.0 that greedy search is not appropriate
-        if self.temperature != 1.0:
-            warnings.warn("Temperature does not have an affect on Greedy search!")
+        if self.temperature != 1.0 and not self.multinomial_sampling:
+            warnings.warn(
+                "Temperature does not have an affect on Greedy search if multinomial sampling is set to False! If forgot to add multinomail sampling, set `multinomial_sampling=True` to the generator."
+            )
 
         for batch_inputs in self.get_batches(inputs):
             batch_size = len(batch_inputs)
@@ -68,7 +72,14 @@ class GreedyGenerator(BaseGenerator):
                 batch_outputs = batch_outputs[:, -1, :]  # Get last tokens' outputs for the batch
                 next_tokens = batch_outputs / self.temperature
                 next_tokens = F.softmax(next_tokens, dim=-1)
-                next_tokens = torch.argmax(next_tokens, dim=-1)
+                # check for multinomial sampling
+                if self.multinomial_sampling:
+                    next_tokens = torch.multinomial(
+                        next_tokens,
+                        num_samples=1,
+                    ).squeeze()
+                else:
+                    next_tokens = torch.argmax(next_tokens, dim=-1)
                 not_finished = ~finished_mask
                 decoder_inputs[not_finished, step] = next_tokens[not_finished]
                 finished_mask |= next_tokens == self.eos_token_id  # Update finished sequences
@@ -149,6 +160,7 @@ class BeamSearchGenerator(BaseGenerator):
         device: str = "cuda",
         temperature: float = 1.0,
         use_tqdm: bool = True,
+        multinomial_sampling: bool = False,
         beam_width: int = 4,
         length_penalty: float = 1.0,
         beam_nodes_ordering_function: Callable[
@@ -164,6 +176,7 @@ class BeamSearchGenerator(BaseGenerator):
             device,
             temperature,
             use_tqdm,
+            multinomial_sampling,
         )
         self.beam_width = beam_width
         self.length_penalty = length_penalty
@@ -209,7 +222,16 @@ class BeamSearchGenerator(BaseGenerator):
                     batch_outputs = batch_outputs[:, -1, :]
                     batch_outputs = batch_outputs / self.temperature
                     batch_outputs = F.log_softmax(batch_outputs, dim=-1)
-                    topk_scores, topk_indices = torch.topk(batch_outputs, self.beam_width)
+                    # check for multinomial sampling
+                    if self.multinomial_sampling:
+                        topk_indices = torch.multinomial(
+                            torch.exp(batch_outputs),
+                            self.beam_width,
+                            replacement=True,
+                        )
+                        topk_scores = batch_outputs.gather(1, topk_indices)
+                    else:
+                        topk_scores, topk_indices = torch.topk(batch_outputs, self.beam_width)
                     for beam_index, beam in enumerate(next_beams):
                         # Check if this sequence has already reached eos token
                         if best_beams_nodes[beam_index][k].tokens[-1] == self.eos_token_id:
