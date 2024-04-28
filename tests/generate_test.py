@@ -84,7 +84,7 @@ beam_search_sequences_generator = BeamSearchGenerator(
 )
 
 
-# Test generate method
+# Test greeyd generation method
 def test_greedy_generate():
     generated_sequences = tokenizer.batch_decode(
         greedy_sequences_generator.generate(input_texts),
@@ -100,6 +100,28 @@ def test_greedy_generate():
     )
 
 
+# Test greedy generation with multinomial sampling
+def test_greedy_generate_with_multinomail_sampling():
+    prev_state = greedy_sequences_generator.multinomial_sampling
+    greedy_sequences_generator.multinomial_sampling = True
+    generated_sequences = tokenizer.batch_decode(
+        greedy_sequences_generator.generate(input_texts),
+        skip_special_tokens=True,
+    )
+    greedy_sequences_generator.multinomial_sampling = prev_state
+    # we do not have control on the final results of the sequences with multinomial sampling
+    # each time they come with different varying outcomes
+    # we endup checking if it just get come bleu score
+    assert (
+        0
+        < bleu_scorer.compute(
+            predictions=generated_sequences,
+            references=targets,
+        )["score"]
+    )
+
+
+# Test beam search generation
 def test_beam_search_generate():
     generated_sequences = tokenizer.batch_decode(
         beam_search_sequences_generator.generate(input_texts),
@@ -115,12 +137,15 @@ def test_beam_search_generate():
     )
 
 
+# Test beam search generation with temperature
 def test_beam_search_generate_with_temperature():
+    prev_temp = beam_search_sequences_generator.temperature
     beam_search_sequences_generator.temperature = 0.75
     generated_sequences = tokenizer.batch_decode(
         beam_search_sequences_generator.generate(input_texts),
         skip_special_tokens=True,
     )
+    beam_search_sequences_generator.temperature = prev_temp
     assert (
         14
         < bleu_scorer.compute(
