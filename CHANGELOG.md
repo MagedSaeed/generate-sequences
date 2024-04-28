@@ -7,9 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-## [v0.0.3](https://github.com/MagedSaeed/generate-sequences/releases/tag/v0.0.3) - 2024-04-28
-
-## [v0.0.4](https://github.com/MagedSaeed/generate-sequences/releases/tag/v0.0.1) - 2024-04-28
+## [v0.0.4](https://github.com/MagedSaeed/generate-sequences/releases/tag/v0.0.4) - 2024-04-28
 
 ### Added
 
@@ -17,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add tests for multinomial sampling.
 - Inegrate some examples regarding multinomial sampling in hf_compre notebook.
 
-## [v0.0.3](https://github.com/MagedSaeed/generate-sequences/releases/tag/v0.0.1) - 2024-04-23
+## [v0.0.3](https://github.com/MagedSaeed/generate-sequences/releases/tag/v0.0.3) - 2024-04-23
 
 ### Added
 
@@ -33,7 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Remove the function `sample_tokens_probs` and replace its code in the `generate` method for each algorithm.
 - Remove `minimum_penalty_tokens_length` from beam search generation.
 
-## [v0.0.2](https://github.com/MagedSaeed/generate-sequences/releases/tag/v0.0.1) - 2024-04-21
+## [v0.0.2](https://github.com/MagedSaeed/generate-sequences/releases/tag/v0.0.2) - 2024-04-21
 
 ### Added
 
