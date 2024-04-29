@@ -34,7 +34,8 @@ targets = [example[target_language] for example in test_dataset["translation"]][
 encoder_outputs: Dict[str, torch.Tensor] = {}
 
 
-def hf_generate_fn(inputs, decoder_input_ids):
+# Custom generation_forward function for the model above.
+def generation_forward(inputs, decoder_input_ids):
     global encoder_outputs
     tokenizer_results = tokenizer(
         inputs,
@@ -65,7 +66,7 @@ greedy_sequences_generator = GreedyGenerator(
     device=model.device,
     batch_size=BATCH_SIZE,
     max_length=MAX_LENGTH,
-    generate_fn=hf_generate_fn,
+    generation_forward=generation_forward,
     eos_token_id=model.generation_config.eos_token_id,
     decoder_start_token_id=model.generation_config.decoder_start_token_id,
 )
@@ -78,7 +79,7 @@ beam_search_sequences_generator = BeamSearchGenerator(
     device=model.device,
     max_length=MAX_LENGTH,
     batch_size=BATCH_SIZE,
-    generate_fn=hf_generate_fn,
+    generation_forward=generation_forward,
     eos_token_id=model.generation_config.eos_token_id,
     decoder_start_token_id=model.generation_config.decoder_start_token_id,
 )

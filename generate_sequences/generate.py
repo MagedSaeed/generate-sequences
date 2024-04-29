@@ -13,7 +13,7 @@ class BaseGenerator:
         self,
         decoder_start_token_id: int,
         eos_token_id: int,
-        generate_fn: Callable[
+        generation_forward: Callable[
             [Union[List[torch.Tensor], List[str]], torch.Tensor],
             torch.Tensor,
         ],
@@ -28,7 +28,7 @@ class BaseGenerator:
         self.use_tqdm = use_tqdm
         self.max_length = max_length
         self.batch_size = batch_size
-        self.generate_fn = generate_fn
+        self.generation_forward = generation_forward
         self.eos_token_id = eos_token_id
         self.decoder_start_token_id = decoder_start_token_id
         self.temperature = temperature
@@ -68,7 +68,7 @@ class GreedyGenerator(BaseGenerator):
             for step in range(1, self.max_length):
                 if finished_mask.all():
                     break  # Stop if all sequences are finished
-                batch_outputs = self.generate_fn(batch_inputs, decoder_inputs[:, :step])
+                batch_outputs = self.generation_forward(batch_inputs, decoder_inputs[:, :step])
                 batch_outputs = batch_outputs[:, -1, :]  # Get last tokens' outputs for the batch
                 next_tokens = batch_outputs / self.temperature
                 next_tokens = F.softmax(next_tokens, dim=-1)
@@ -151,7 +151,7 @@ class BeamSearchGenerator(BaseGenerator):
         self,
         decoder_start_token_id: int,
         eos_token_id: int,
-        generate_fn: Callable[
+        generation_forward: Callable[
             [Union[List[torch.Tensor], List[str]], torch.Tensor],
             torch.Tensor,
         ],
@@ -170,7 +170,7 @@ class BeamSearchGenerator(BaseGenerator):
         super().__init__(
             decoder_start_token_id,
             eos_token_id,
-            generate_fn,
+            generation_forward,
             max_length,
             batch_size,
             device,
@@ -218,7 +218,7 @@ class BeamSearchGenerator(BaseGenerator):
                     decoder_input_ids = torch.LongTensor(
                         [topk_nodes[k].tokens for topk_nodes in best_beams_nodes]
                     ).to(self.device)
-                    batch_outputs = self.generate_fn(batch, decoder_input_ids)
+                    batch_outputs = self.generation_forward(batch, decoder_input_ids)
                     batch_outputs = batch_outputs[:, -1, :]
                     batch_outputs = batch_outputs / self.temperature
                     batch_outputs = F.log_softmax(batch_outputs, dim=-1)
