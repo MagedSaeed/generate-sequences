@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [v0.0.5](https://github.com/MagedSaeed/generate-sequences/releases/tag/v0.0.5) - 2024-04-29
+
+### Added
+
+- rename `generate_fn` to more appropriate name: `generation_forward`
+
 ## [v0.0.4](https://github.com/MagedSaeed/generate-sequences/releases/tag/v0.0.4) - 2024-04-28
 
 ### Added
