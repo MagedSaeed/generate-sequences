@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [v0.0.6](https://github.com/MagedSaeed/generate-sequences/releases/tag/v0.0.6) - 2024-05-3
+
+### Added
+
+- Improve the code quality for beam search.
+- General config updates.
+
 ## [v0.0.5](https://github.com/MagedSaeed/generate-sequences/releases/tag/v0.0.5) - 2024-04-29
 
 ### Added
