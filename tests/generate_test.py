@@ -8,7 +8,7 @@ from transformers import MarianMTModel, MarianTokenizer
 
 from generate_sequences import BeamSearchGenerator, GreedyGenerator
 
-DEVICE = "cpu"
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 BATCH_SIZE = 2
 MAX_LENGTH = 50
 
@@ -41,7 +41,7 @@ def generation_forward(inputs, decoder_input_ids):
         inputs,
         return_tensors="pt",
         padding=True,
-    )
+    ).to(DEVICE)
     if not encoder_outputs.get(json.dumps(inputs)):
         input_ids, attention_mask = (
             tokenizer_results["input_ids"],
