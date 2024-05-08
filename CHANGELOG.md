@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [v0.0.7](https://github.com/MagedSaeed/generate-sequences/releases/tag/v0.0.7) - 2024-05-8
+
+### Added
+
+- Add the feature of sorting samples before generation.
+- Add tests for this new feature.
+
+### Changed
+- Minor fixes and renaming.
+
+
 ## [v0.0.6](https://github.com/MagedSaeed/generate-sequences/releases/tag/v0.0.6) - 2024-05-3
 
 ### Added
