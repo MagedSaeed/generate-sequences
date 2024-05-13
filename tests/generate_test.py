@@ -8,7 +8,7 @@ from transformers import MarianMTModel, MarianTokenizer
 
 from generate_sequences import BeamSearchGenerator, GreedyGenerator
 
-DEVICE = "cpu"
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 BATCH_SIZE = 2
 MAX_LENGTH = 50
 
@@ -34,13 +34,14 @@ targets = [example[target_language] for example in test_dataset["translation"]][
 encoder_outputs: Dict[str, torch.Tensor] = {}
 
 
-def hf_generate_fn(inputs, decoder_input_ids):
+# Custom generation_forward function for the model above.
+def generation_forward(inputs, decoder_input_ids):
     global encoder_outputs
     tokenizer_results = tokenizer(
         inputs,
         return_tensors="pt",
         padding=True,
-    )
+    ).to(DEVICE)
     if not encoder_outputs.get(json.dumps(inputs)):
         input_ids, attention_mask = (
             tokenizer_results["input_ids"],
@@ -65,7 +66,7 @@ greedy_sequences_generator = GreedyGenerator(
     device=model.device,
     batch_size=BATCH_SIZE,
     max_length=MAX_LENGTH,
-    generate_fn=hf_generate_fn,
+    generation_forward=generation_forward,
     eos_token_id=model.generation_config.eos_token_id,
     decoder_start_token_id=model.generation_config.decoder_start_token_id,
 )
@@ -78,13 +79,13 @@ beam_search_sequences_generator = BeamSearchGenerator(
     device=model.device,
     max_length=MAX_LENGTH,
     batch_size=BATCH_SIZE,
-    generate_fn=hf_generate_fn,
+    generation_forward=generation_forward,
     eos_token_id=model.generation_config.eos_token_id,
     decoder_start_token_id=model.generation_config.decoder_start_token_id,
 )
 
 
-# Test generate method
+# Test greedy generation method
 def test_greedy_generate():
     generated_sequences = tokenizer.batch_decode(
         greedy_sequences_generator.generate(input_texts),
@@ -100,6 +101,44 @@ def test_greedy_generate():
     )
 
 
+def test_greedy_generate_with_sorted_samples():
+    greedy_sequences_generator.sort_samples = True
+    generated_sequences = tokenizer.batch_decode(
+        greedy_sequences_generator.generate(input_texts),
+        skip_special_tokens=True,
+    )
+    assert (
+        7
+        < bleu_scorer.compute(
+            predictions=generated_sequences,
+            references=targets,
+        )["score"]
+        < 8
+    )
+
+
+# Test greedy generation with multinomial sampling
+def test_greedy_generate_with_multinomial_sampling():
+    prev_state = greedy_sequences_generator.multinomial_sampling
+    greedy_sequences_generator.multinomial_sampling = True
+    generated_sequences = tokenizer.batch_decode(
+        greedy_sequences_generator.generate(input_texts),
+        skip_special_tokens=True,
+    )
+    greedy_sequences_generator.multinomial_sampling = prev_state
+    # we do not have control on the final results of the sequences with multinomial sampling
+    # each time they come with different varying outcomes
+    # we end up checking if it just get come bleu score
+    assert (
+        0
+        < bleu_scorer.compute(
+            predictions=generated_sequences,
+            references=targets,
+        )["score"]
+    )
+
+
+# Test beam search generation
 def test_beam_search_generate():
     generated_sequences = tokenizer.batch_decode(
         beam_search_sequences_generator.generate(input_texts),
@@ -115,12 +154,15 @@ def test_beam_search_generate():
     )
 
 
+# Test beam search generation with temperature
 def test_beam_search_generate_with_temperature():
+    prev_temp = beam_search_sequences_generator.temperature
     beam_search_sequences_generator.temperature = 0.75
     generated_sequences = tokenizer.batch_decode(
         beam_search_sequences_generator.generate(input_texts),
         skip_special_tokens=True,
     )
+    beam_search_sequences_generator.temperature = prev_temp
     assert (
         14
         < bleu_scorer.compute(

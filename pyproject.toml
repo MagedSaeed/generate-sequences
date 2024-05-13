@@ -20,7 +20,7 @@ dependencies = [
   # Add your own dependencies here
   "tqdm==4.66.*",
   "numpy>=1.24.0",
-  "torch==2.2.*",
+  "torch>=2.2,<2.4",
 ]
 license = { file = "LICENSE" }
 
@@ -33,7 +33,7 @@ Changelog = "https://github.com/MagedSaeed/generate-sequences/blob/main/CHANGELO
 [project.optional-dependencies]
 dev = [
   "ruff",
-  "mypy>=1.0,<1.10",
+  "mypy>=1.0,<1.11",
   "black>=23.0,<25.0",
   "isort>=5.12,<5.14",
   "pytest",
@@ -44,7 +44,7 @@ dev = [
   "setuptools",
   "wheel",
   "Sphinx>=4.3.0,<7.4.0",
-  "furo==2024.1.29",
+  "furo==2024.5.6",
   "myst-parser>=1.0,<3.1",
   "sphinx-copybutton==0.5.2",
   "sphinx-autobuild==2021.3.14",
@@ -99,7 +99,7 @@ reportPrivateImportUsage = false
 line-length = 115
 target-version = "py39"
 
-[tool.ruff.per-file-ignores]
+[tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]
 
 [tool.mypy]

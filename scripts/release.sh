@@ -2,6 +2,10 @@
 
 set -e
 
+echo "Make sure you are in the package ROOT DIR"
+
+pip install .
+
 TAG=$(python -c 'from generate_sequences.version import VERSION; print("v" + VERSION)')
 
 read -p "Creating new release for $TAG. Do you want to continue? [Y/n] " prompt

@@ -7,7 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-## [v0.0.3](https://github.com/MagedSaeed/generate-sequences/releases/tag/v0.0.1) - 2024-04-23
+## [v0.0.7](https://github.com/MagedSaeed/generate-sequences/releases/tag/v0.0.7) - 2024-05-8
+
+### Added
+
+- Add the feature of sorting samples before generation.
+- Add tests for this new feature.
+
+### Changed
+- Minor fixes and renaming.
+
+
+## [v0.0.6](https://github.com/MagedSaeed/generate-sequences/releases/tag/v0.0.6) - 2024-05-3
+
+### Added
+
+- Improve the code quality for beam search.
+- General config updates.
+
+## [v0.0.5](https://github.com/MagedSaeed/generate-sequences/releases/tag/v0.0.5) - 2024-04-29
+
+### Added
+
+- rename `generate_fn` to more appropriate name: `generation_forward`
+
+## [v0.0.4](https://github.com/MagedSaeed/generate-sequences/releases/tag/v0.0.4) - 2024-04-28
+
+### Added
+
+- Add multinomial sampling for both generation methods, greedy and beam search.
+- Add tests for multinomial sampling.
+- Inegrate some examples regarding multinomial sampling in hf_compre notebook.
+
+## [v0.0.3](https://github.com/MagedSaeed/generate-sequences/releases/tag/v0.0.3) - 2024-04-23
 
 ### Added
 
@@ -23,7 +55,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Remove the function `sample_tokens_probs` and replace its code in the `generate` method for each algorithm.
 - Remove `minimum_penalty_tokens_length` from beam search generation.
 
-## [v0.0.2](https://github.com/MagedSaeed/generate-sequences/releases/tag/v0.0.1) - 2024-04-21
+## [v0.0.2](https://github.com/MagedSaeed/generate-sequences/releases/tag/v0.0.2) - 2024-04-21
 
 ### Added
 
@@ -50,7 +82,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 
 - Unused code used to initialize the project to pypi.
-
 
 
 ## [v0.0.0](https://github.com/MagedSaeed/generate-sequences/releases/tag/v0.0.0) - 2024-03-30
