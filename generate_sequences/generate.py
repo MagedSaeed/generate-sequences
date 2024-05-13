@@ -23,6 +23,7 @@ class BaseGenerator:
         temperature: float = 1.0,
         use_tqdm: bool = True,
         multinomial_sampling: bool = False,
+        tok_sampling: int = 0,
     ) -> None:
         self.device = device
         self.use_tqdm = use_tqdm
@@ -33,6 +34,9 @@ class BaseGenerator:
         self.decoder_start_token_id = decoder_start_token_id
         self.temperature = temperature
         self.multinomial_sampling = multinomial_sampling
+        self.topk_sampling = tok_sampling
+        if not self.multinomial_sampling and self.topk_sampling > 0:
+            raise ValueError("Top-k sampling requires multinomial sampling to be set to True")
 
     def get_batches(self, inputs: Union[List[torch.Tensor], List[str]]) -> Iterator[List[str]]:
         for i in tqdm(
@@ -74,6 +78,8 @@ class GreedyGenerator(BaseGenerator):
                 next_tokens = F.softmax(next_tokens, dim=-1)
                 # check for multinomial sampling
                 if self.multinomial_sampling:
+                    if self.topk_sampling > 0:
+                        _, next_tokens = torch.topk(next_tokens, self.topk_sampling, dim=-1)
                     next_tokens = torch.multinomial(
                         next_tokens,
                         num_samples=1,
@@ -124,6 +130,7 @@ class BeamSearchGenerator(BaseGenerator):
         temperature: float = 1.0,
         use_tqdm: bool = True,
         multinomial_sampling: bool = False,
+        topk_sampling: int = 0,
         beam_width: int = 4,
         length_penalty: float = 1.0,
         beam_nodes_ordering_function: Callable[
@@ -140,7 +147,10 @@ class BeamSearchGenerator(BaseGenerator):
             temperature,
             use_tqdm,
             multinomial_sampling,
+            topk_sampling,
         )
+        if topk_sampling > 0 and topk_sampling < beam_width:
+            raise ValueError("Top-k sampling should be larger than beam width")
         self.beam_width = beam_width
         self.length_penalty = length_penalty
         self.beam_nodes_ordering_function = beam_nodes_ordering_function
@@ -195,8 +205,14 @@ class BeamSearchGenerator(BaseGenerator):
                     batch_outputs = F.log_softmax(batch_outputs, dim=-1)
                     # check for multinomial sampling
                     if self.multinomial_sampling:
+                        if self.topk_sampling > 0:
+                            topk_scores, topk_indices = torch.topk(
+                                batch_outputs,
+                                self.topk_sampling,
+                                dim=-1,
+                            )
                         topk_indices = torch.multinomial(
-                            torch.exp(batch_outputs),
+                            torch.exp(topk_scores),
                             self.beam_width,
                             replacement=True,
                         )
