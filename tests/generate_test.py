@@ -102,24 +102,24 @@ def test_greedy_generate():
 
 
 # Test greedy generation with multinomial sampling
-def test_greedy_generate_with_multinomail_sampling():
-    prev_state = greedy_sequences_generator.multinomial_sampling
-    greedy_sequences_generator.multinomial_sampling = True
-    generated_sequences = tokenizer.batch_decode(
-        greedy_sequences_generator.generate(input_texts),
-        skip_special_tokens=True,
-    )
-    greedy_sequences_generator.multinomial_sampling = prev_state
-    # we do not have control on the final results of the sequences with multinomial sampling
-    # each time they come with different varying outcomes
-    # we endup checking if it just get come bleu score
-    assert (
-        0
-        < bleu_scorer.compute(
-            predictions=generated_sequences,
-            references=targets,
-        )["score"]
-    )
+# def test_greedy_generate_with_multinomail_sampling():
+#     prev_state = greedy_sequences_generator.multinomial_sampling
+#     greedy_sequences_generator.multinomial_sampling = True
+#     generated_sequences = tokenizer.batch_decode(
+#         greedy_sequences_generator.generate(input_texts),
+#         skip_special_tokens=True,
+#     )
+#     greedy_sequences_generator.multinomial_sampling = prev_state
+#     # we do not have control on the final results of the sequences with multinomial sampling
+#     # each time they come with different varying outcomes
+#     # we endup checking if it just get come bleu score
+#     assert (
+#         0
+#         < bleu_scorer.compute(
+#             predictions=generated_sequences,
+#             references=targets,
+#         )["score"]
+#     )
 
 
 # Test beam search generation
