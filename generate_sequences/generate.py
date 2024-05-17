@@ -1,13 +1,9 @@
 import heapq
-import warnings
 from typing import Callable, Iterator, List, Union
 
 import torch
 import torch.nn.functional as F
-import torch.utils
 from tqdm.auto import tqdm
-
-from generate_sequences.sample import Sampler
 
 
 class BaseGenerator:
@@ -24,7 +20,8 @@ class BaseGenerator:
         device: str = "cuda" if torch.cuda.is_available() else "cpu",
         temperature: float = 1.0,
         use_tqdm: bool = True,
-        sampler: Union[Sampler, None] = None,
+        top_k_sampling: int = 0,
+        multinomial_sampling: bool = False,
     ) -> None:
         self.device = device
         self.use_tqdm = use_tqdm
@@ -34,7 +31,8 @@ class BaseGenerator:
         self.eos_token_id = eos_token_id
         self.decoder_start_token_id = decoder_start_token_id
         self.temperature = temperature
-        self.sampler = sampler
+        self.top_k_sampling = top_k_sampling
+        self.multinomial_sampling = multinomial_sampling
 
     def get_batches(self, inputs: Union[List[torch.Tensor], List[str]]) -> Iterator[List[str]]:
         for i in tqdm(
@@ -50,11 +48,6 @@ class GreedyGenerator(BaseGenerator):
     @torch.no_grad()
     def generate(self, inputs: Union[List[torch.Tensor], List[str]]) -> List[torch.Tensor]:
         outputs = []
-        # add user warning if temperature is not 1.0 that greedy search is not appropriate
-        if self.temperature != 1.0 and self.sampler and not self.sampler.multinomial_sampling:
-            warnings.warn(
-                "Temperature does not have an affect on Greedy search if multinomial sampling is set to False!"
-            )
 
         for batch_inputs in self.get_batches(inputs):
             batch_size = len(batch_inputs)
@@ -72,9 +65,19 @@ class GreedyGenerator(BaseGenerator):
                     break  # Stop if all sequences are finished
                 batch_outputs = self.generation_forward(batch_inputs, decoder_inputs[:, :step])
                 logits = batch_outputs[:, -1, :] / self.temperature
-                logits = F.softmax(logits, dim=-1)
-                if self.sampler:
-                    logits, next_tokens = self.sampler.sample(logits, max_tokens=1)
+                if self.top_k_sampling > 0:
+                    top_logits, _ = torch.topk(
+                        logits,
+                        min(self.top_k_sampling, logits.size(-1)),  # in case top_k_sampling > vocab
+                        dim=-1,
+                    )
+                    logits[logits < top_logits[:, [-1]]] = -float("Inf")
+                logits = F.log_softmax(logits, dim=-1)
+                if self.multinomial_sampling:
+                    next_tokens = torch.multinomial(
+                        torch.exp(logits),
+                        num_samples=1,
+                    ).squeeze()
                 else:
                     next_tokens = torch.argmax(logits, dim=-1)
                 not_finished = ~finished_mask
@@ -120,7 +123,8 @@ class BeamSearchGenerator(BaseGenerator):
         device: str = "cuda" if torch.cuda.is_available() else "cpu",
         temperature: float = 1.0,
         use_tqdm: bool = True,
-        sampler: Union[Sampler, None] = None,
+        top_k_sampling: int = 0,
+        multinomial_sampling: bool = False,
         beam_width: int = 4,
         length_penalty: float = 1.0,
         beam_nodes_ordering_function: Callable[
@@ -136,7 +140,8 @@ class BeamSearchGenerator(BaseGenerator):
             device,
             temperature,
             use_tqdm,
-            sampler,
+            top_k_sampling,
+            multinomial_sampling,
         )
         self.beam_width = beam_width
         self.length_penalty = length_penalty
@@ -188,11 +193,20 @@ class BeamSearchGenerator(BaseGenerator):
                     ).to(self.device)
                     batch_outputs = self.generation_forward(batch, decoder_input_ids)
                     logits = batch_outputs[:, -1, :] / self.temperature
-                    logits = F.log_softmax(logits, dim=-1)
-                    if self.sampler:
-                        logits, next_tokens = self.sampler.sample(
+                    if self.top_k_sampling > 0:
+                        top_logits, _ = torch.topk(
                             logits,
-                            max_tokens=self.beam_width,
+                            # catch the case case top_k_sampling > vocab
+                            min(self.top_k_sampling, logits.size(-1)),
+                            dim=-1,
+                        )
+                        logits[logits < top_logits[:, [-1]]] = -float("Inf")
+                    logits = F.log_softmax(logits, dim=-1)
+                    if self.multinomial_sampling:
+                        next_tokens = torch.multinomial(
+                            torch.exp(logits),
+                            num_samples=self.beam_width,
+                            replacement=True,
                         )
                         logits = logits.gather(1, next_tokens)
                     else:
@@ -212,7 +226,7 @@ class BeamSearchGenerator(BaseGenerator):
                                     tokens=batch_best_nodes[sample_index][k].tokens
                                     + [next_tokens[sample_index][i].item()],
                                     score=batch_best_nodes[sample_index][k].score
-                                    + next_tokens[sample_index][i].item(),
+                                    + logits[sample_index][i].item(),
                                 )
                                 for i in range(self.beam_width)
                             ]
