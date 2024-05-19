@@ -64,6 +64,7 @@ class BaseGenerator:
         return ordered_outputs
 
     def sample_next_tokens(self, logits, num_tokens=1, min_tokens_to_keep=2):
+        logits = logits / self.temperature
         if self.top_k_sampling > 0:
             top_logits, _ = torch.topk(
                 logits,
@@ -90,7 +91,7 @@ class BaseGenerator:
             # for i in range(logits.size(0)):
             #     indices_to_remove = sorted_indices[i, sorted_indices_to_remove[i]]
             #     logits[i, indices_to_remove] = -float("Inf")
-        logits = F.log_softmax(logits, dim=-1) / self.temperature
+        logits = F.log_softmax(logits, dim=-1)
         if self.multinomial_sampling:
             next_tokens = torch.multinomial(
                 torch.exp(logits),
