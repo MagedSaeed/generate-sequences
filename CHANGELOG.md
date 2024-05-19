@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [v0.0.8](https://github.com/MagedSaeed/generate-sequences/releases/tag/v0.0.8) - 2024-05-19
+
+### Added
+
+- Add top-p and top-k sampling.
+- Add tests for these new feature.
+- update hf_generate notebook
+
+### Changed
+- Minor fixes and renaming.
+
 ## [v0.0.7](https://github.com/MagedSaeed/generate-sequences/releases/tag/v0.0.7) - 2024-05-8
 
 ### Added
