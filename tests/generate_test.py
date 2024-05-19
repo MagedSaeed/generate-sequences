@@ -118,14 +118,19 @@ def test_greedy_generate_with_sorted_samples():
 
 
 # Test greedy generation with multinomial sampling
-def test_greedy_generate_with_multinomial_sampling():
-    prev_state = greedy_sequences_generator.multinomial_sampling
+def test_greedy_generate_with_sampling():
+    prev_sampling = greedy_sequences_generator.multinomial_sampling
+    prev_temp = greedy_sequences_generator.temperature
     greedy_sequences_generator.multinomial_sampling = True
+    beam_search_sequences_generator.temperature = 0.95
+    greedy_sequences_generator.top_p_sampling = 0.9
+    greedy_sequences_generator.top_k_sampling = 10
     generated_sequences = tokenizer.batch_decode(
         greedy_sequences_generator.generate(input_texts),
         skip_special_tokens=True,
     )
-    greedy_sequences_generator.multinomial_sampling = prev_state
+    greedy_sequences_generator.multinomial_sampling = prev_sampling
+    greedy_sequences_generator.temperature = prev_temp
     # we do not have control on the final results of the sequences with multinomial sampling
     # each time they come with different varying outcomes
     # we end up checking if it just get come bleu score
@@ -155,19 +160,23 @@ def test_beam_search_generate():
 
 
 # Test beam search generation with temperature
-def test_beam_search_generate_with_temperature():
+def test_beam_search_generate_with_sampling():
     prev_temp = beam_search_sequences_generator.temperature
-    beam_search_sequences_generator.temperature = 0.75
+    prev_sampling = beam_search_sequences_generator.multinomial_sampling
+    beam_search_sequences_generator.multinomial_sampling = True
+    beam_search_sequences_generator.temperature = 0.95
+    beam_search_sequences_generator.top_p_sampling = 0.9
+    beam_search_sequences_generator.top_k_sampling = 10
     generated_sequences = tokenizer.batch_decode(
         beam_search_sequences_generator.generate(input_texts),
         skip_special_tokens=True,
     )
     beam_search_sequences_generator.temperature = prev_temp
+    beam_search_sequences_generator.multinomial_sampling = prev_sampling
     assert (
-        14
+        0
         < bleu_scorer.compute(
             predictions=generated_sequences,
             references=targets,
         )["score"]
-        < 15
     )
