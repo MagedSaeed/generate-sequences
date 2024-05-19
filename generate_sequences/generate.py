@@ -78,8 +78,8 @@ class BaseGenerator:
             if min_tokens_to_keep > 1:
                 # Keep at least min_tokens_to_keep (set to min_tokens_to_keep-1 because we add the first one below)
                 sorted_indices_to_remove[..., :min_tokens_to_keep] = 0
-            sorted_indices_to_remove[:, 1:] = sorted_indices_to_remove[:, :-1].clone()
-            sorted_indices_to_remove[:, 0] = 0
+            sorted_indices_to_remove[..., 1:] = sorted_indices_to_remove[..., :-1].clone()
+            sorted_indices_to_remove[..., 0] = 0
             indices_to_remove = sorted_indices_to_remove.scatter(
                 1,
                 sorted_indices,
@@ -90,16 +90,13 @@ class BaseGenerator:
             # for i in range(logits.size(0)):
             #     indices_to_remove = sorted_indices[i, sorted_indices_to_remove[i]]
             #     logits[i, indices_to_remove] = -float("Inf")
-        logits = F.log_softmax(logits, dim=-1)
+        logits = F.log_softmax(logits, dim=-1) / self.temperature
         if self.multinomial_sampling:
             next_tokens = torch.multinomial(
                 torch.exp(logits),
                 num_samples=num_tokens,
             )
             logits = logits.gather(-1, next_tokens)
-            # sort the sampled vector to make sure that the first num_beams samples are the best
-            logits, next_scores_indices = torch.sort(logits, descending=True, dim=1)
-            next_tokens = torch.gather(next_tokens, -1, next_scores_indices)
         else:
             logits, next_tokens = torch.topk(logits, num_tokens)
         return logits, next_tokens
@@ -125,7 +122,7 @@ class GreedyGenerator(BaseGenerator):
                 if finished_mask.all():
                     break  # Stop if all sequences are finished
                 batch_outputs = self.generation_forward(batch_inputs, decoder_inputs[:, :step])
-                logits = batch_outputs[:, -1, :] / self.temperature
+                logits = batch_outputs[:, -1, :]
                 _, next_tokens = self.sample_next_tokens(logits)
                 next_tokens = next_tokens.squeeze()
                 not_finished = ~finished_mask
@@ -242,7 +239,7 @@ class BeamSearchGenerator(BaseGenerator):
                         [sample_best_nodes[k].tokens for sample_best_nodes in batch_best_nodes]
                     ).to(self.device)
                     batch_outputs = self.generation_forward(batch, decoder_input_ids)
-                    logits = batch_outputs[:, -1, :] / self.temperature
+                    logits = batch_outputs[:, -1, :]
                     logits, next_tokens = self.sample_next_tokens(
                         logits, num_tokens=self.beam_width
                     )
