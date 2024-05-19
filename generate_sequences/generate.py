@@ -63,7 +63,7 @@ class BaseGenerator:
             ordered_outputs.append(outputs[position])
         return ordered_outputs
 
-    def sample_next_tokens(self, logits, num_tokens=1):
+    def sample_next_tokens(self, logits, num_tokens=1, min_tokens_to_keep=2):
         if self.top_k_sampling > 0:
             top_logits, _ = torch.topk(
                 logits,
@@ -75,6 +75,9 @@ class BaseGenerator:
             sorted_logits, sorted_indices = torch.sort(logits, descending=True)
             cumulative_probs = torch.cumsum(F.softmax(sorted_logits, dim=-1), dim=-1)
             sorted_indices_to_remove = cumulative_probs > self.top_p_sampling
+            if min_tokens_to_keep > 1:
+                # Keep at least min_tokens_to_keep (set to min_tokens_to_keep-1 because we add the first one below)
+                sorted_indices_to_remove[..., :min_tokens_to_keep] = 0
             sorted_indices_to_remove[:, 1:] = sorted_indices_to_remove[:, :-1].clone()
             sorted_indices_to_remove[:, 0] = 0
             indices_to_remove = sorted_indices_to_remove.scatter(
@@ -92,9 +95,11 @@ class BaseGenerator:
             next_tokens = torch.multinomial(
                 torch.exp(logits),
                 num_samples=num_tokens,
-                replacement=True,
             )
-            logits = logits.gather(1, next_tokens)
+            logits = logits.gather(-1, next_tokens)
+            # sort the sampled vector to make sure that the first num_beams samples are the best
+            logits, next_scores_indices = torch.sort(logits, descending=True, dim=1)
+            next_tokens = torch.gather(next_tokens, -1, next_scores_indices)
         else:
             logits, next_tokens = torch.topk(logits, num_tokens)
         return logits, next_tokens
