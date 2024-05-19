@@ -5,6 +5,8 @@ import torch
 import torch.nn.functional as F
 from tqdm.auto import tqdm
 
+from generate_sequences.utils import sort_list_with_positions
+
 
 class BaseGenerator:
     def __init__(
@@ -23,6 +25,7 @@ class BaseGenerator:
         top_k_sampling: int = 0,
         top_p_sampling: float = 0.0,
         multinomial_sampling: bool = False,
+        sort_samples: bool = False,
     ) -> None:
         self.device = device
         self.use_tqdm = use_tqdm
@@ -35,15 +38,30 @@ class BaseGenerator:
         self.top_k_sampling = top_k_sampling
         self.top_p_sampling = top_p_sampling
         self.multinomial_sampling = multinomial_sampling
+        self.sort_samples = sort_samples
 
     def get_batches(self, inputs: Union[List[torch.Tensor], List[str]]) -> Iterator[List[str]]:
+        batched_inputs = inputs
+        if self.sort_samples:
+            sorted_inputs, inputs_positions = sort_list_with_positions(inputs)
+            self.inputs_original_positions = inputs_positions
+            batched_inputs = sorted_inputs
+
         for i in tqdm(
-            range(0, len(inputs), self.batch_size),
+            range(0, len(batched_inputs), self.batch_size),
             disable=not self.use_tqdm,
             desc="Generating Sequences",
-            total=len(inputs) // self.batch_size,
+            total=len(batched_inputs) // self.batch_size,
         ):
-            yield inputs[i : i + self.batch_size]
+            yield batched_inputs[i : i + self.batch_size]
+
+    def restore_outputs_order(self, outputs):
+        if not self.sort_samples:
+            return outputs
+        ordered_outputs = []
+        for position in self.inputs_original_positions:
+            ordered_outputs.append(outputs[position])
+        return ordered_outputs
 
     def sample_next_tokens(self, logits, num_tokens=1):
         if self.top_k_sampling > 0:
@@ -109,7 +127,7 @@ class GreedyGenerator(BaseGenerator):
                 decoder_inputs[not_finished, step] = next_tokens[not_finished]
                 finished_mask |= next_tokens == self.eos_token_id  # Update finished sequences
             outputs += decoder_inputs
-        return outputs
+        return self.restore_outputs_order(outputs)
 
 
 class BeamNode:
@@ -149,6 +167,7 @@ class BeamSearchGenerator(BaseGenerator):
         top_k_sampling: int = 0,
         top_p_sampling: float = 0.0,
         multinomial_sampling: bool = False,
+        sort_samples: bool = False,
         beam_width: int = 4,
         length_penalty: float = 1.0,
         beam_nodes_ordering_function: Callable[
@@ -167,6 +186,7 @@ class BeamSearchGenerator(BaseGenerator):
             top_k_sampling,
             top_p_sampling,
             multinomial_sampling,
+            sort_samples,
         )
         self.beam_width = beam_width
         self.length_penalty = length_penalty
@@ -186,7 +206,7 @@ class BeamSearchGenerator(BaseGenerator):
 
     @torch.no_grad
     def generate(self, inputs: Union[List[torch.Tensor], List[str]]) -> List[torch.Tensor]:
-        predictions = []
+        outputs = []
         for batch in self.get_batches(inputs):
             batch_nodes = [
                 [
@@ -253,5 +273,5 @@ class BeamSearchGenerator(BaseGenerator):
                     ),
                 )
                 batch_predictions.append(best_node.tokens)
-            predictions += batch_predictions
-        return predictions
+            outputs += batch_predictions
+        return self.restore_outputs_order(outputs)
