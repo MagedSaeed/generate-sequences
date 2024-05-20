@@ -56,7 +56,7 @@ dev = [
   "sacrebleu==2.4.*",
   "sacremoses==0.1.*",
   "sentencepiece==0.2.*",
-  "transformers>=4.39,<4.41",
+  "transformers>=4.39,<4.42",
 ]
 
 [tool.setuptools.packages.find]
