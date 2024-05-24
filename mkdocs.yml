@@ -1,0 +1,68 @@
+site_name: Generate Sequences Docs
+site_description: Docs for generate-sequences package
+site_url: https://magedsaeed.github.io/generate-sequences
+
+repo_url: https://github.com/MagedSaeed/generate-sequences
+edit_uri: edit/master/docs/docs
+
+### Build settings ###
+
+theme:
+  name: material
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - toc.integrate
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.tabs.link
+    - content.code.annotation
+    - content.code.copy
+  language: en
+  palette:
+    - scheme: default
+      toggle:
+        icon: material/toggle-switch-off-outline 
+        name: Switch to dark mode
+      primary: teal
+      accent: purple 
+    - scheme: slate 
+      toggle:
+        icon: material/toggle-switch
+        name: Switch to light mode    
+      primary: teal
+      accent: lime
+
+plugins:
+  - social
+  - search
+
+extra:
+  social:
+    - icon: fontawesome/brands/github-alt
+      link: https://github.com/MagedSaeed
+    - icon: fontawesome/brands/twitter
+      link: https://twitter.com/_MagedSaeed_
+    - icon: fontawesome/brands/linkedin
+      link: https://www.linkedin.com/in/maged-saeed-2948591b4/
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - admonition
+  - pymdownx.arithmatex:
+      generic: true
+  - footnotes
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.mark
+  - attr_list
+  - pymdownx.emoji:
+      emoji_index: !!python/name:materialx.emoji.twemoji
+      emoji_generator: !!python/name:materialx.emoji.to_svg
+
+copyright: |
+  &copy; 2024 <a href="https://github.com/MagedSaeed"  target="_blank" rel="noopener">Maged Saeed</a>
