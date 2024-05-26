@@ -110,7 +110,7 @@ class GreedyGenerator(BaseGenerator):
         encoder_inputs: Union[List[torch.Tensor], List[str], None],
         decoder_inputs: Union[List[torch.Tensor], List[str], None],
     ) -> List[torch.Tensor]:
-        outputs = []
+        outputs: List[torch.Tensor] = []
         start_decoding_from = 0
         inputs = encoder_inputs
         if not inputs:
