@@ -25,7 +25,7 @@ class BaseGenerator:
         top_k_sampling: int = 0,
         top_p_sampling: float = 0.0,
         multinomial_sampling: bool = False,
-        sort_samples: bool = False,
+        sort_encoder_inputs: bool = False,
     ) -> None:
         self.device = device
         self.use_tqdm = use_tqdm
@@ -38,13 +38,13 @@ class BaseGenerator:
         self.top_k_sampling = top_k_sampling
         self.top_p_sampling = top_p_sampling
         self.multinomial_sampling = multinomial_sampling
-        self.sort_samples = sort_samples
+        self.sort_encoder_inputs = sort_encoder_inputs
 
     def get_batches(self, inputs: Union[List[torch.Tensor], List[str]]) -> Iterator[List[str]]:
         batched_inputs = inputs
-        if self.sort_samples:
+        if self.sort_encoder_inputs:
             sorted_inputs, inputs_positions = sort_list_with_positions(inputs)
-            self.inputs_original_positions = inputs_positions
+            self._inputs_original_positions = inputs_positions
             batched_inputs = sorted_inputs
 
         for i in tqdm(
@@ -56,10 +56,10 @@ class BaseGenerator:
             yield batched_inputs[i : i + self.batch_size]
 
     def restore_outputs_order(self, outputs):
-        if not self.sort_samples:
+        if not self.sort_encoder_inputs:
             return outputs
         ordered_outputs = []
-        for position in self.inputs_original_positions:
+        for position in self._inputs_original_positions:
             ordered_outputs.append(outputs[position])
         return ordered_outputs
 
@@ -105,30 +105,60 @@ class BaseGenerator:
 
 class GreedyGenerator(BaseGenerator):
     @torch.no_grad()
-    def generate(self, inputs: Union[List[torch.Tensor], List[str]]) -> List[torch.Tensor]:
+    def generate(
+        self,
+        encoder_inputs: Union[List[torch.Tensor], List[str], None],
+        decoder_inputs: Union[List[torch.Tensor], List[str], None],
+    ) -> List[torch.Tensor]:
         outputs = []
+        start_decoding_from = 0
+        inputs = encoder_inputs
+        if not inputs:
+            inputs = decoder_inputs
 
-        for batch_inputs in self.get_batches(inputs):
-            batch_size = len(batch_inputs)
-            decoder_inputs = torch.full(
-                (batch_size, self.max_length),
-                self.eos_token_id,  # Pre-fill with EOS; only overwrite if generating
-                dtype=torch.long,
-                device=self.device,
-            )
-            decoder_inputs[:, 0] = self.decoder_start_token_id
+        for batch in self.get_batches(inputs):
+            batch_size = len(batch)
+            if encoder_inputs:
+                decoder_inputs = torch.full(
+                    (batch_size, self.max_length),
+                    self.eos_token_id,  # Pre-fill with EOS; only overwrite if generating
+                    dtype=torch.long,
+                    device=self.device,
+                )
+                decoder_inputs[:, 0] = self.decoder_start_token_id
+            else:
+                start_decoding_from = decoder_inputs.shape[-1]
+                # extend decoder inputs with eos untill max_length to be of size [batch_size, max_length]
+                decoder_inputs = torch.cat(
+                    (
+                        decoder_inputs,
+                        torch.full(
+                            (
+                                batch_size,
+                                self.max_length - decoder_inputs.size(1),
+                            ),
+                            self.eos_token_id,
+                            device=self.device,
+                        ),
+                    ),
+                    dim=-1,
+                )
             finished_mask = torch.zeros(batch_size, dtype=torch.bool, device=self.device)
-
-            for step in range(1, self.max_length):
+            for step in range(start_decoding_from, self.max_length):
                 if finished_mask.all():
                     break  # Stop if all sequences are finished
-                batch_outputs = self.generation_forward(batch_inputs, decoder_inputs[:, :step])
+                if encoder_inputs:
+                    batch_outputs = self.generation_forward(batch, decoder_inputs[:, :step])
+                else:
+                    batch_outputs = self.generation_forward(None, decoder_inputs[:, :step])
                 logits = batch_outputs[:, -1, :]
                 _, next_tokens = self.sample_next_tokens(logits)
-                next_tokens = next_tokens.squeeze()
+                next_tokens = next_tokens.squeeze(-1)
                 not_finished = ~finished_mask
                 decoder_inputs[not_finished, step] = next_tokens[not_finished]
-                finished_mask |= next_tokens == self.eos_token_id  # Update finished sequences
+                finished_mask |= (
+                    next_tokens.squeeze() == self.eos_token_id
+                )  # Update finished sequences
             outputs += decoder_inputs
         return self.restore_outputs_order(outputs)
 
@@ -170,7 +200,7 @@ class BeamSearchGenerator(BaseGenerator):
         top_k_sampling: int = 0,
         top_p_sampling: float = 0.0,
         multinomial_sampling: bool = False,
-        sort_samples: bool = False,
+        sort_encoder_inputs: bool = False,
         beam_width: int = 4,
         length_penalty: float = 1.0,
         beam_nodes_ordering_function: Callable[
@@ -189,7 +219,7 @@ class BeamSearchGenerator(BaseGenerator):
             top_k_sampling,
             top_p_sampling,
             multinomial_sampling,
-            sort_samples,
+            sort_encoder_inputs,
         )
         self.beam_width = beam_width
         self.length_penalty = length_penalty
@@ -208,9 +238,9 @@ class BeamSearchGenerator(BaseGenerator):
         )
 
     @torch.no_grad
-    def generate(self, inputs: Union[List[torch.Tensor], List[str]]) -> List[torch.Tensor]:
+    def generate(self, encoder_inputs: Union[List[torch.Tensor], List[str]]) -> List[torch.Tensor]:
         outputs = []
-        for batch in self.get_batches(inputs):
+        for batch in self.get_batches(encoder_inputs):
             batch_nodes = [
                 [
                     BeamNode(
