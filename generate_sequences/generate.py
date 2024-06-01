@@ -87,7 +87,7 @@ class BaseGenerator:
                 sorted_indices_to_remove,
             )
             logits[indices_to_remove] = -float("Inf")
-            # the above scatter is equevalent to:
+            # the above scatter is equevalent to something like:
             # for i in range(logits.size(0)):
             #     indices_to_remove = sorted_indices[i, sorted_indices_to_remove[i]]
             #     logits[i, indices_to_remove] = -float("Inf")
@@ -104,63 +104,146 @@ class BaseGenerator:
 
 
 class GreedyGenerator(BaseGenerator):
+    def _encoder_decoder_generate(self, encoder_inputs):
+        outputs = []
+        for encoder_inputs_batch in self.get_batches(encoder_inputs):
+            batch_size = len(encoder_inputs_batch)
+            decoder_inputs = torch.full(
+                (batch_size, self.max_length),
+                self.eos_token_id,  # Pre-fill with EOS; only overwrite if generating
+                dtype=torch.long,
+                device=self.device,
+            )
+            decoder_inputs[:, 0] = self.decoder_start_token_id
+            finished_sequences_mask = torch.zeros(batch_size, dtype=torch.bool, device=self.device)
+            for step in range(1, self.max_length):
+                if finished_sequences_mask.all():
+                    break  # Stop if all sequences are finished
+                batch_outputs = self.generation_forward(
+                    encoder_inputs_batch,
+                    decoder_inputs[:, :step],
+                )
+                logits = batch_outputs[:, -1, :]
+                _, next_tokens = self.sample_next_tokens(logits)
+                next_tokens = next_tokens.squeeze(-1)
+                unfinished_sequences_mask = ~finished_sequences_mask
+                decoder_inputs[unfinished_sequences_mask, step] = next_tokens[
+                    unfinished_sequences_mask
+                ]
+                finished_sequences_mask |= (
+                    next_tokens.squeeze() == self.eos_token_id
+                )  # Update finished sequences
+            outputs += decoder_inputs
+        return outputs
+
+    def _decoder_only_generate(self, decoder_inputs):
+        outputs = []
+        for decoder_inputs_batch in self.get_batches(decoder_inputs):
+            batch_size = len(decoder_inputs_batch)
+            start_decoding_from = decoder_inputs_batch.shape[-1]
+            # extend the current batch of decoder inputs with eos untill max_length to be of size [batch_size, max_length]
+            decoder_inputs_batch = torch.cat(
+                (
+                    decoder_inputs_batch,
+                    torch.full(
+                        (
+                            batch_size,
+                            self.max_length - decoder_inputs_batch.size(1),
+                        ),
+                        self.eos_token_id,
+                        device=self.device,
+                    ),
+                ),
+                dim=-1,
+            )
+            finished_sequences_mask = torch.zeros(batch_size, dtype=torch.bool, device=self.device)
+            for step in range(start_decoding_from, self.max_length):
+                if finished_sequences_mask.all():
+                    break  # Stop if all sequences are finished
+                batch_outputs = self.generation_forward(None, decoder_inputs_batch[:, :step])
+                logits = batch_outputs[:, -1, :]
+                _, next_tokens = self.sample_next_tokens(logits)
+                next_tokens = next_tokens.squeeze(-1)
+                unfinished_sequences_mask = ~finished_sequences_mask
+                decoder_inputs_batch[unfinished_sequences_mask, step] = next_tokens[
+                    unfinished_sequences_mask
+                ]
+                finished_sequences_mask |= (
+                    next_tokens.squeeze() == self.eos_token_id
+                )  # Update finished sequences
+            outputs += decoder_inputs_batch
+        return outputs
+
     @torch.no_grad()
     def generate(
         self,
         encoder_inputs: Union[List[torch.Tensor], List[str], None],
-        decoder_inputs: Union[List[torch.Tensor], List[str], None],
+        decoder_inputs: Union[List[torch.Tensor], List[str], None] = None,
     ) -> List[torch.Tensor]:
         outputs: List[torch.Tensor] = []
-        start_decoding_from = 0
-        inputs = encoder_inputs
-        if not inputs:
-            inputs = decoder_inputs
-
-        for batch in self.get_batches(inputs):
-            batch_size = len(batch)
-            if encoder_inputs:
-                decoder_inputs = torch.full(
-                    (batch_size, self.max_length),
-                    self.eos_token_id,  # Pre-fill with EOS; only overwrite if generating
-                    dtype=torch.long,
-                    device=self.device,
-                )
-                decoder_inputs[:, 0] = self.decoder_start_token_id
-            else:
-                start_decoding_from = decoder_inputs.shape[-1]
-                # extend decoder inputs with eos untill max_length to be of size [batch_size, max_length]
-                decoder_inputs = torch.cat(
-                    (
-                        decoder_inputs,
-                        torch.full(
-                            (
-                                batch_size,
-                                self.max_length - decoder_inputs.size(1),
-                            ),
-                            self.eos_token_id,
-                            device=self.device,
-                        ),
-                    ),
-                    dim=-1,
-                )
-            finished_mask = torch.zeros(batch_size, dtype=torch.bool, device=self.device)
-            for step in range(start_decoding_from, self.max_length):
-                if finished_mask.all():
-                    break  # Stop if all sequences are finished
-                if encoder_inputs:
-                    batch_outputs = self.generation_forward(batch, decoder_inputs[:, :step])
-                else:
-                    batch_outputs = self.generation_forward(None, decoder_inputs[:, :step])
-                logits = batch_outputs[:, -1, :]
-                _, next_tokens = self.sample_next_tokens(logits)
-                next_tokens = next_tokens.squeeze(-1)
-                not_finished = ~finished_mask
-                decoder_inputs[not_finished, step] = next_tokens[not_finished]
-                finished_mask |= (
-                    next_tokens.squeeze() == self.eos_token_id
-                )  # Update finished sequences
-            outputs += decoder_inputs
+        if encoder_inputs:
+            outputs = self._encoder_decoder_generate(encoder_inputs)
+        else:
+            outputs = self._decoder_only_generate(decoder_inputs)
         return self.restore_outputs_order(outputs)
+
+    # @torch.no_grad()
+    # def generate(
+    #     self,
+    #     encoder_inputs: Union[List[torch.Tensor], List[str], None],
+    #     decoder_inputs: Union[List[torch.Tensor], List[str], None],
+    # ) -> List[torch.Tensor]:
+    #     outputs: List[torch.Tensor] = []
+    #     start_decoding_from = 0
+    #     inputs = encoder_inputs
+    #     if not inputs:
+    #         inputs = decoder_inputs
+
+    #     for batch in self.get_batches(inputs):
+    #         batch_size = len(batch)
+    #         if encoder_inputs:
+    #             decoder_inputs = torch.full(
+    #                 (batch_size, self.max_length),
+    #                 self.eos_token_id,  # Pre-fill with EOS; only overwrite if generating
+    #                 dtype=torch.long,
+    #                 device=self.device,
+    #             )
+    #             decoder_inputs[:, 0] = self.decoder_start_token_id
+    #         else:
+    #             start_decoding_from = decoder_inputs.shape[-1]
+    #             # extend decoder inputs with eos untill max_length to be of size [batch_size, max_length]
+    #             decoder_inputs = torch.cat(
+    #                 (
+    #                     decoder_inputs,
+    #                     torch.full(
+    #                         (
+    #                             batch_size,
+    #                             self.max_length - decoder_inputs.size(1),
+    #                         ),
+    #                         self.eos_token_id,
+    #                         device=self.device,
+    #                     ),
+    #                 ),
+    #                 dim=-1,
+    #             )
+    #         finished_mask = torch.zeros(batch_size, dtype=torch.bool, device=self.device)
+    #         for step in range(start_decoding_from, self.max_length):
+    #             if finished_mask.all():
+    #                 break  # Stop if all sequences are finished
+    #             if encoder_inputs:
+    #                 batch_outputs = self.generation_forward(batch, decoder_inputs[:, :step])
+    #             else:
+    #                 batch_outputs = self.generation_forward(None, decoder_inputs[:, :step])
+    #             logits = batch_outputs[:, -1, :]
+    #             _, next_tokens = self.sample_next_tokens(logits)
+    #             next_tokens = next_tokens.squeeze(-1)
+    #             not_finished = ~finished_mask
+    #             decoder_inputs[not_finished, step] = next_tokens[not_finished]
+    #             finished_mask |= (
+    #                 next_tokens.squeeze() == self.eos_token_id
+    #             )  # Update finished sequences
+    #         outputs += decoder_inputs
+    #     return self.restore_outputs_order(outputs)
 
 
 class BeamNode:
