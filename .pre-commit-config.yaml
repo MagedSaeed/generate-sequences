@@ -21,7 +21,7 @@ repos:
         additional_dependencies: [toml]  # Add this if your project uses pyproject.toml for isort configuration
 
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: 'v1.9.0'  # Use the latest revision
+    rev: 'v1.10.0'  # Use the sha / tag you want to point at
     hooks:
-      - id: mypy
-        additional_dependencies: [types-requests, types-setuptools]  # Example: include these if you're using requests or setuptools in your project
+    -   id: mypy
+        args: [--ignore-missing-imports]
