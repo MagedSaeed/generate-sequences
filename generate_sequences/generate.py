@@ -187,64 +187,6 @@ class GreedyGenerator(BaseGenerator):
             outputs = self._decoder_only_generate(decoder_inputs)
         return self.restore_outputs_order(outputs)
 
-    # @torch.no_grad()
-    # def generate(
-    #     self,
-    #     encoder_inputs: Union[List[torch.Tensor], List[str], None],
-    #     decoder_inputs: Union[List[torch.Tensor], List[str], None],
-    # ) -> List[torch.Tensor]:
-    #     outputs: List[torch.Tensor] = []
-    #     start_decoding_from = 0
-    #     inputs = encoder_inputs
-    #     if not inputs:
-    #         inputs = decoder_inputs
-
-    #     for batch in self.get_batches(inputs):
-    #         batch_size = len(batch)
-    #         if encoder_inputs:
-    #             decoder_inputs = torch.full(
-    #                 (batch_size, self.max_length),
-    #                 self.eos_token_id,  # Pre-fill with EOS; only overwrite if generating
-    #                 dtype=torch.long,
-    #                 device=self.device,
-    #             )
-    #             decoder_inputs[:, 0] = self.decoder_start_token_id
-    #         else:
-    #             start_decoding_from = decoder_inputs.shape[-1]
-    #             # extend decoder inputs with eos untill max_length to be of size [batch_size, max_length]
-    #             decoder_inputs = torch.cat(
-    #                 (
-    #                     decoder_inputs,
-    #                     torch.full(
-    #                         (
-    #                             batch_size,
-    #                             self.max_length - decoder_inputs.size(1),
-    #                         ),
-    #                         self.eos_token_id,
-    #                         device=self.device,
-    #                     ),
-    #                 ),
-    #                 dim=-1,
-    #             )
-    #         finished_mask = torch.zeros(batch_size, dtype=torch.bool, device=self.device)
-    #         for step in range(start_decoding_from, self.max_length):
-    #             if finished_mask.all():
-    #                 break  # Stop if all sequences are finished
-    #             if encoder_inputs:
-    #                 batch_outputs = self.generation_forward(batch, decoder_inputs[:, :step])
-    #             else:
-    #                 batch_outputs = self.generation_forward(None, decoder_inputs[:, :step])
-    #             logits = batch_outputs[:, -1, :]
-    #             _, next_tokens = self.sample_next_tokens(logits)
-    #             next_tokens = next_tokens.squeeze(-1)
-    #             not_finished = ~finished_mask
-    #             decoder_inputs[not_finished, step] = next_tokens[not_finished]
-    #             finished_mask |= (
-    #                 next_tokens.squeeze() == self.eos_token_id
-    #             )  # Update finished sequences
-    #         outputs += decoder_inputs
-    #     return self.restore_outputs_order(outputs)
-
 
 class BeamNode:
     """Represents a node in a beam search. Stores token sequences and their associated score."""
