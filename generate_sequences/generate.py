@@ -1,11 +1,11 @@
 import heapq
-from typing import Callable, Iterator, List, Union
+from typing import Callable, Iterator, List, Optional, Union
 
 import torch
 import torch.nn.functional as F
 from tqdm.auto import tqdm
 
-from generate_sequences.utils import sort_list_with_positions
+from generate_sequences.utils import pad_tensors_list, sort_list_with_positions
 
 
 class BaseGenerator:
@@ -14,7 +14,10 @@ class BaseGenerator:
         decoder_start_token_id: int,
         eos_token_id: int,
         generation_forward: Callable[
-            [Union[List[torch.Tensor], List[str]], torch.Tensor],
+            [
+                Union[torch.Tensor, List[torch.Tensor], List[str], None],
+                Union[torch.Tensor, List[torch.Tensor]],
+            ],
             torch.Tensor,
         ],
         max_length: int = 1_024,
@@ -40,7 +43,9 @@ class BaseGenerator:
         self.multinomial_sampling = multinomial_sampling
         self.sort_encoder_inputs = sort_encoder_inputs
 
-    def get_batches(self, inputs: Union[List[torch.Tensor], List[str]]) -> Iterator[List[str]]:
+    def get_batches(
+        self, inputs: Union[torch.Tensor, List[torch.Tensor], List[str]]
+    ) -> Iterator[Union[torch.Tensor, List[torch.Tensor], List[str]]]:
         batched_inputs = inputs
         if self.sort_encoder_inputs:
             sorted_inputs, inputs_positions = sort_list_with_positions(inputs)
@@ -136,11 +141,11 @@ class GreedyGenerator(BaseGenerator):
             outputs += decoder_inputs
         return outputs
 
-    def _decoder_only_generate(self, decoder_inputs):
+    def _decoder_only_generate(self, decoder_inputs: torch.Tensor):
         outputs = []
         for decoder_inputs_batch in self.get_batches(decoder_inputs):
             batch_size = len(decoder_inputs_batch)
-            start_decoding_from = decoder_inputs_batch.shape[-1]
+            start_decoding_from = decoder_inputs_batch.shape[-1]  # type: ignore
             # extend the current batch of decoder inputs with eos untill max_length to be of size [batch_size, max_length]
             decoder_inputs_batch = torch.cat(
                 (
@@ -148,7 +153,7 @@ class GreedyGenerator(BaseGenerator):
                     torch.full(
                         (
                             batch_size,
-                            self.max_length - decoder_inputs_batch.size(1),
+                            self.max_length - decoder_inputs_batch.size(1),  # type: ignore
                         ),
                         self.eos_token_id,
                         device=self.device,
@@ -177,9 +182,39 @@ class GreedyGenerator(BaseGenerator):
     @torch.no_grad()
     def generate(
         self,
-        encoder_inputs: Union[List[torch.Tensor], List[str], None],
-        decoder_inputs: Union[List[torch.Tensor], List[str], None] = None,
+        encoder_inputs: Union[torch.Tensor, List[torch.Tensor], List[List[int]], None],
+        decoder_inputs: Union[torch.Tensor, List[torch.Tensor], None] = None,
+        pad_decoder_inputs: Optional[int] = None,
+        decoder_inputs_padding_side: Optional[str] = "left",
     ) -> List[torch.Tensor]:
+        # assert decoder_inputs is 2d tensors or list of 1d tensors or integers
+        if decoder_inputs is not None:
+            if isinstance(decoder_inputs, torch.Tensor):
+                assert decoder_inputs.dim() == 2, "decoder_inputs must be a 2D tensor"
+            elif isinstance(decoder_inputs, list):
+                assert all(
+                    isinstance(item, (torch.Tensor, list)) for item in decoder_inputs
+                ), "decoder_inputs must be a list of 1D tensors or a list of lists of integers"
+                if isinstance(decoder_inputs[0], torch.Tensor):
+                    assert all(
+                        tensor.dim() == 1 for tensor in decoder_inputs
+                    ), "All items in decoder_inputs list must be 1D tensors"
+                elif isinstance(decoder_inputs[0], list):
+                    assert all(
+                        isinstance(item, int) for sublist in decoder_inputs for item in sublist
+                    ), "All items in decoder_inputs lists must be integers"
+            else:
+                raise TypeError(
+                    "decoder_inputs must be either a 2D tensor, a list of 1D tensors, or a list of lists of integers"
+                )
+
+        if pad_decoder_inputs is not None and isinstance(decoder_inputs, list):
+            decoder_inputs = pad_tensors_list(
+                decoder_inputs,
+                device=self.device,
+                pad_with=pad_decoder_inputs,
+                padding_side=decoder_inputs_padding_side,
+            )
         outputs: List[torch.Tensor] = []
         if encoder_inputs:
             outputs = self._encoder_decoder_generate(encoder_inputs)
@@ -214,7 +249,10 @@ class BeamSearchGenerator(BaseGenerator):
         decoder_start_token_id: int,
         eos_token_id: int,
         generation_forward: Callable[
-            [Union[List[torch.Tensor], List[str]], torch.Tensor],
+            [
+                Union[torch.Tensor, List[torch.Tensor], List[str], None],
+                Union[torch.Tensor, List[torch.Tensor]],
+            ],
             torch.Tensor,
         ],
         max_length: int = 1_024,
