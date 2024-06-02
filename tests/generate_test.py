@@ -15,30 +15,25 @@ MAX_LENGTH = 50
 gpt2_tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
 gpt2_model = GPT2LMHeadModel.from_pretrained("gpt2").to(DEVICE)
 
-
 model_name = "marefa-nlp/marefa-mt-en-ar"
 tokenizer = MarianTokenizer.from_pretrained(model_name)
 model = MarianMTModel.from_pretrained(model_name).to(DEVICE)
 
-
 bleu_scorer = evaluate.load("sacrebleu")
-
 
 test_dataset = datasets.load_dataset("iwslt2017", "iwslt2017-ar-en", split="test")
 
 source_language = "en"
 target_language = "ar"
 
-
 input_texts = [example[source_language] for example in test_dataset["translation"]][-10:]
 targets = [example[target_language] for example in test_dataset["translation"]][-10:]
-
 
 encoder_outputs: Dict[str, torch.Tensor] = {}
 
 
 # Custom generation_forward function for the model above.
-def generation_forward(inputs, decoder_input_ids):
+def encoder_decoder_generation_forward(inputs, decoder_input_ids):
     global encoder_outputs
     tokenizer_results = tokenizer(
         inputs,
@@ -63,13 +58,26 @@ def generation_forward(inputs, decoder_input_ids):
     return model_outputs.logits
 
 
+# Custom generation_forward function for the GPT-2 model (decoder-only).
+def decoder_only_generation_forward(inputs, decoder_input_ids):
+    input_ids = gpt2_tokenizer(
+        inputs,
+        return_tensors="pt",
+        padding=True,
+        truncation=True,
+        max_length=MAX_LENGTH,
+    ).input_ids.to(DEVICE)
+    model_outputs = gpt2_model(input_ids=input_ids, decoder_input_ids=decoder_input_ids)
+    return model_outputs.logits
+
+
 # Initialize GreedyGenerator
 greedy_generator = GreedyGenerator(
     use_tqdm=True,
     device=model.device,
     batch_size=BATCH_SIZE,
     max_length=MAX_LENGTH,
-    generation_forward=generation_forward,
+    generation_forward=encoder_decoder_generation_forward,
     eos_token_id=model.generation_config.eos_token_id,
     decoder_start_token_id=model.generation_config.decoder_start_token_id,
 )
@@ -82,7 +90,7 @@ beam_search_generator = BeamSearchGenerator(
     device=model.device,
     max_length=MAX_LENGTH,
     batch_size=BATCH_SIZE,
-    generation_forward=generation_forward,
+    generation_forward=encoder_decoder_generation_forward,
     eos_token_id=model.generation_config.eos_token_id,
     decoder_start_token_id=model.generation_config.decoder_start_token_id,
 )
@@ -185,54 +193,51 @@ def test_beam_search_generate_with_sampling():
     )
 
 
-# decoder_only_greedy_generator = GreedyGenerator(
-#     use_tqdm=True,
-#     device=gpt2_model.device,
-#     batch_size=BATCH_SIZE,
-#     max_length=MAX_LENGTH,
-#     generation_forward=lambda encoder_inputs, decoder_inputs: gpt2_model(
-#         input_ids=decoder_inputs
-#     ).logits,
-#     eos_token_id=gpt2_model.generation_config.eos_token_id,
-#     decoder_start_token_id=gpt2_model.generation_config.decoder_start_token_id,
-# )
+gpt2_greedy_generator = GreedyGenerator(
+    use_tqdm=True,
+    batch_size=BATCH_SIZE,
+    max_length=MAX_LENGTH,
+    device=gpt2_model.device,
+    generation_forward=lambda encoder_inputs, decoder_inputs: gpt2_model(input_ids=decoder_inputs).logits,
+    eos_token_id=gpt2_model.generation_config.eos_token_id,
+    decoder_start_token_id=gpt2_model.generation_config.decoder_start_token_id,
+)
 
 
-# def test_decoder_only_greedy_generate():
-#     prompts = [
-#         "Once upon a time,",
-#         "another once, upon a time,",
-#         "Also, another once, upon a time,",
-#         "Finally, one more final once, upon a time,",
-#     ]
-#     input_ids = [
-#         gpt2_tokenizer(prompt, return_tensors="pt").to(DEVICE).input_ids.squeeze()
-#         for prompt in prompts
-#     ]
-#     # left pad with eos token
-#     max_prompt_length = max([prompt.shape[-1] for prompt in input_ids])
-#     input_ids = [
-#         torch.cat(
-#             [
-#                 torch.full(
-#                     (max_prompt_length - prompt_ids.shape[-1],),
-#                     model.generation_config.bos_token_id,
-#                     dtype=torch.long,
-#                     device=DEVICE,
-#                 ),
-#                 prompt_ids,
-#             ],
-#             dim=-1,
-#         )
-#         for prompt_ids in input_ids
-#     ]
-#     input_ids = torch.stack(input_ids)
+def test_gpt2_greedy_generate():
+    prompts = [
+        "Once upon a time,",
+        "another once, upon a time,",
+        "Also, another once, upon a time,",
+        "Finally, one more final once, upon a time,",
+    ]
+    input_ids = [gpt2_tokenizer(prompt, return_tensors="pt").to(DEVICE).input_ids.squeeze() for prompt in prompts]
+    # left pad with bos token
+    max_prompt_length = max([prompt.shape[-1] for prompt in input_ids])
+    input_ids = [
+        torch.cat(
+            [
+                torch.full(
+                    (max_prompt_length - prompt_ids.shape[-1],),
+                    gpt2_tokenizer.bos_token_id,
+                    dtype=torch.long,
+                    device=DEVICE,
+                ),
+                prompt_ids,
+            ],
+            dim=-1,
+        )
+        for prompt_ids in input_ids
+    ]
+    input_ids = torch.stack(input_ids)
 
-#     results = decoder_only_greedy_generator.generate(
-#         encoder_inputs=None,
-#         decoder_inputs=input_ids,
-#     )
-
-#     for result in results:
-#         print(gpt2_tokenizer.decode(result[:5], skip_special_tokens=True))
-#     return True
+    results = gpt2_greedy_generator.generate(
+        encoder_inputs=None,
+        decoder_inputs=input_ids,
+    )
+    assert len(results) == len(prompts)
+    assert all(len(result) == MAX_LENGTH for result in results)
+    # for debugging:
+    # for result in results:
+    #     print(gpt2_tokenizer.decode(result[:5], skip_special_tokens=True))
+    return True
