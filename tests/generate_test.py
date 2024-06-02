@@ -21,7 +21,9 @@ model = MarianMTModel.from_pretrained(model_name).to(DEVICE)
 
 bleu_scorer = evaluate.load("sacrebleu")
 
-test_dataset = datasets.load_dataset("iwslt2017", "iwslt2017-ar-en", split="test")
+test_dataset = datasets.load_dataset(
+    "iwslt2017", "iwslt2017-ar-en", split="test", trust_remote_code=True
+)
 
 source_language = "en"
 target_language = "ar"
@@ -198,7 +200,9 @@ gpt2_greedy_generator = GreedyGenerator(
     batch_size=BATCH_SIZE,
     max_length=MAX_LENGTH,
     device=gpt2_model.device,
-    generation_forward=lambda encoder_inputs, decoder_inputs: gpt2_model(input_ids=decoder_inputs).logits,
+    generation_forward=lambda encoder_inputs, decoder_inputs: gpt2_model(
+        input_ids=decoder_inputs
+    ).logits,
     eos_token_id=gpt2_model.generation_config.eos_token_id,
     decoder_start_token_id=gpt2_model.generation_config.decoder_start_token_id,
 )
@@ -211,33 +215,17 @@ def test_gpt2_greedy_generate():
         "Also, another once, upon a time,",
         "Finally, one more final once, upon a time,",
     ]
-    input_ids = [gpt2_tokenizer(prompt, return_tensors="pt").to(DEVICE).input_ids.squeeze() for prompt in prompts]
-    # left pad with bos token
-    max_prompt_length = max([prompt.shape[-1] for prompt in input_ids])
     input_ids = [
-        torch.cat(
-            [
-                torch.full(
-                    (max_prompt_length - prompt_ids.shape[-1],),
-                    gpt2_tokenizer.bos_token_id,
-                    dtype=torch.long,
-                    device=DEVICE,
-                ),
-                prompt_ids,
-            ],
-            dim=-1,
-        )
-        for prompt_ids in input_ids
+        gpt2_tokenizer(prompt, return_tensors="pt").to(DEVICE).input_ids.squeeze()
+        for prompt in prompts
     ]
-    input_ids = torch.stack(input_ids)
-
     results = gpt2_greedy_generator.generate(
         encoder_inputs=None,
         decoder_inputs=input_ids,
+        pad_decoder_inputs=gpt2_tokenizer.bos_token_id,
     )
     assert len(results) == len(prompts)
     assert all(len(result) == MAX_LENGTH for result in results)
     # for debugging:
     # for result in results:
     #     print(gpt2_tokenizer.decode(result[:5], skip_special_tokens=True))
-    return True
