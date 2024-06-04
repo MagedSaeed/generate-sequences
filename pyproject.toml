@@ -48,7 +48,7 @@ dev = [
   "myst-parser>=1.0,<3.1",
   "sphinx-copybutton==0.5.2",
   "sphinx-autobuild==2021.3.14",
-  "sphinx-autodoc-typehints==2.0.0",
+  "sphinx-autodoc-typehints==2.1.1",
   "packaging",
   "pre-commit==3.5.0",
   # added for testing
