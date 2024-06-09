@@ -92,7 +92,7 @@ class BaseGenerator:
                 sorted_indices_to_remove,
             )
             logits[indices_to_remove] = -float("Inf")
-            # the above scatter is equevalent to something like:
+            # the above scatter is equivalent to something like:
             # for i in range(logits.size(0)):
             #     indices_to_remove = sorted_indices[i, sorted_indices_to_remove[i]]
             #     logits[i, indices_to_remove] = -float("Inf")
@@ -146,7 +146,7 @@ class GreedyGenerator(BaseGenerator):
         for decoder_inputs_batch in self.get_batches(decoder_inputs):
             batch_size = len(decoder_inputs_batch)
             start_decoding_from = decoder_inputs_batch.shape[-1]  # type: ignore
-            # extend the current batch of decoder inputs with eos untill max_length to be of size [batch_size, max_length]
+            # extend the current batch of decoder inputs with eos until max_length to be of size [batch_size, max_length]
             decoder_inputs_batch = torch.cat(
                 (
                     decoder_inputs_batch,
