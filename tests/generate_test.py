@@ -229,3 +229,38 @@ def test_gpt2_greedy_generate():
     # for debugging:
     # for result in results:
     #     print(gpt2_tokenizer.decode(result[:5], skip_special_tokens=True))
+
+
+gpt2_beam_search_generator = BeamSearchGenerator(
+    use_tqdm=True,
+    batch_size=BATCH_SIZE,
+    max_length=MAX_LENGTH,
+    device=gpt2_model.device,
+    generation_forward=lambda encoder_inputs, decoder_inputs: gpt2_model(
+        input_ids=decoder_inputs
+    ).logits,
+    eos_token_id=gpt2_model.generation_config.eos_token_id,
+    decoder_start_token_id=gpt2_model.generation_config.decoder_start_token_id,
+)
+
+
+def test_gpt2_beam_search_generate():
+    prompts = [
+        "Once upon a time,",
+        "another once, upon a time,",
+        "Also, another once, upon a time,",
+        "Finally, one more final once, upon a time,",
+    ]
+    input_ids = [
+        gpt2_tokenizer(prompt, return_tensors="pt").to(DEVICE).input_ids.squeeze()
+        for prompt in prompts
+    ]
+    results = gpt2_beam_search_generator.generate(
+        encoder_inputs=None,
+        decoder_inputs=input_ids,
+        pad_decoder_inputs=gpt2_tokenizer.bos_token_id,
+    )
+    assert len(results) == len(prompts)
+    assert all(len(result) == MAX_LENGTH for result in results)
+    # for debugging:
+    # print(gpt2_tokenizer.batch_decode(results, skip_special_tokens=True))

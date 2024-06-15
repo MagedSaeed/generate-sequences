@@ -113,32 +113,32 @@ class GreedyGenerator(BaseGenerator):
         outputs = []
         for encoder_inputs_batch in self.get_batches(encoder_inputs):
             batch_size = len(encoder_inputs_batch)
-            decoder_inputs = torch.full(
+            decoder_inputs_batch = torch.full(
                 (batch_size, self.max_length),
                 self.eos_token_id,  # Pre-fill with EOS; only overwrite if generating
                 dtype=torch.long,
                 device=self.device,
             )
-            decoder_inputs[:, 0] = self.decoder_start_token_id
+            decoder_inputs_batch[:, 0] = self.decoder_start_token_id
             finished_sequences_mask = torch.zeros(batch_size, dtype=torch.bool, device=self.device)
             for step in range(1, self.max_length):
                 if finished_sequences_mask.all():
                     break  # Stop if all sequences are finished
                 batch_outputs = self.generation_forward(
                     encoder_inputs_batch,
-                    decoder_inputs[:, :step],
+                    decoder_inputs_batch[:, :step],
                 )
                 logits = batch_outputs[:, -1, :]
                 _, next_tokens = self.sample_next_tokens(logits)
                 next_tokens = next_tokens.squeeze(-1)
                 unfinished_sequences_mask = ~finished_sequences_mask
-                decoder_inputs[unfinished_sequences_mask, step] = next_tokens[
+                decoder_inputs_batch[unfinished_sequences_mask, step] = next_tokens[
                     unfinished_sequences_mask
                 ]
                 finished_sequences_mask |= (
                     next_tokens.squeeze() == self.eos_token_id
                 )  # Update finished sequences
-            outputs += decoder_inputs
+            outputs += decoder_inputs_batch
         return outputs
 
     def _decoder_only_generate(self, decoder_inputs: torch.Tensor):
@@ -239,7 +239,9 @@ def default_beam_nodes_ordering_fn(
     """Calculates the adjusted score of a node for beam sorting. Applies length penalty to score."""
     tokens = node.tokens
     if eos_token_id in tokens:
-        tokens = tokens[1 : tokens.index(eos_token_id) + 1]
+        # get last index of eos_token_id
+        last_eos_index = len(tokens) - tokens[::-1].index(eos_token_id)
+        tokens = tokens[: last_eos_index + 1]
     return node.score / (len(tokens) ** length_penalty)
 
 
@@ -300,8 +302,53 @@ class BeamSearchGenerator(BaseGenerator):
             ),
         )
 
-    @torch.no_grad
-    def generate(self, encoder_inputs: Union[List[torch.Tensor], List[str]]) -> List[torch.Tensor]:
+    @torch.no_grad()
+    def generate(
+        self,
+        encoder_inputs: Union[torch.Tensor, List[torch.Tensor], List[List[int]], None],
+        decoder_inputs: Union[torch.Tensor, List[torch.Tensor], None] = None,
+        pad_decoder_inputs: Optional[int] = None,
+        decoder_inputs_padding_side: Optional[str] = "left",
+    ) -> List[torch.Tensor]:
+        # assert decoder_inputs is 2d tensors or list of 1d tensors or integers
+        if decoder_inputs is not None:
+            if isinstance(decoder_inputs, torch.Tensor):
+                assert decoder_inputs.dim() == 2, "decoder_inputs must be a 2D tensor"
+            elif isinstance(decoder_inputs, list):
+                assert all(
+                    isinstance(item, (torch.Tensor, list)) for item in decoder_inputs
+                ), "decoder_inputs must be a list of 1D tensors or a list of lists of integers"
+                if isinstance(decoder_inputs[0], torch.Tensor):
+                    assert all(
+                        tensor.dim() == 1 for tensor in decoder_inputs
+                    ), "All items in decoder_inputs list must be 1D tensors"
+                elif isinstance(decoder_inputs[0], list):
+                    assert all(
+                        isinstance(item, int) for sublist in decoder_inputs for item in sublist
+                    ), "All items in decoder_inputs lists must be integers"
+            else:
+                raise TypeError(
+                    "decoder_inputs must be either a 2D tensor, a list of 1D tensors, or a list of lists of integers"
+                )
+
+        if pad_decoder_inputs is not None and isinstance(decoder_inputs, list):
+            decoder_inputs = pad_tensors_list(
+                decoder_inputs,
+                device=self.device,
+                pad_with=pad_decoder_inputs,
+                padding_side=decoder_inputs_padding_side,
+            )
+        outputs: List[torch.Tensor] = []
+        if encoder_inputs:
+            outputs = self._encoder_decoder_generate(encoder_inputs)
+        else:
+            outputs = self._decoder_only_generate(decoder_inputs)
+        return self.restore_outputs_order(outputs)
+
+    def _encoder_decoder_generate(
+        self,
+        encoder_inputs: Union[List[torch.Tensor], List[str]],
+    ) -> List[torch.Tensor]:
         outputs = []
         for batch in self.get_batches(encoder_inputs):
             batch_nodes = [
@@ -370,4 +417,79 @@ class BeamSearchGenerator(BaseGenerator):
                 )
                 batch_predictions.append(best_node.tokens)
             outputs += batch_predictions
-        return self.restore_outputs_order(outputs)
+        return outputs
+
+    def _decoder_only_generate(
+        self,
+        decoder_inputs: torch.Tensor,
+    ) -> List[torch.Tensor]:
+        outputs = []
+        for decoder_inputs_batch in self.get_batches(decoder_inputs):
+            batch_nodes = [
+                [
+                    BeamNode(
+                        tokens=[token.item() for token in sample],  # type: ignore
+                        score=0.0,
+                    )
+                ]
+                for sample in decoder_inputs_batch
+            ]
+            batch_best_nodes = batch_nodes
+            for step in range(self.max_length - decoder_inputs_batch.size(1)):  # type: ignore
+                next_nodes: List[List[BeamNode]] = [[] for _ in range(len(decoder_inputs_batch))]
+                batch_best_nodes = [
+                    self.get_top_nodes(sample_nodes) for sample_nodes in batch_best_nodes
+                ]
+                # break when all best nodes ends with eos
+                if all(
+                    batch_best_nodes[sample_index][i].tokens[-1] == self.eos_token_id
+                    for sample_index in range(len(decoder_inputs_batch))
+                    for i in range(len(batch_best_nodes[sample_index]))
+                ):
+                    break
+                # beam width, taking the case where k < len(best_beams_nodes[0]), i.e. in the first step
+                beam_width = 1 if step == 0 else self.beam_width
+                for k in range(beam_width):
+                    decoder_input_ids = torch.LongTensor(
+                        [sample_best_nodes[k].tokens for sample_best_nodes in batch_best_nodes]
+                    ).to(self.device)
+                    batch_outputs = self.generation_forward(None, decoder_input_ids)
+                    logits = batch_outputs[:, -1, :]
+                    logits, next_tokens = self.sample_next_tokens(
+                        logits,
+                        num_tokens=self.beam_width,
+                    )
+                    for sample_index in range(len(decoder_inputs_batch)):
+                        if batch_best_nodes[sample_index][k].tokens[-1] == self.eos_token_id:
+                            next_nodes[sample_index] += [
+                                BeamNode(
+                                    tokens=batch_best_nodes[sample_index][k].tokens
+                                    + [self.eos_token_id],
+                                    score=0,
+                                )
+                            ] * self.beam_width
+                        else:
+                            next_nodes[sample_index] += [
+                                BeamNode(
+                                    tokens=batch_best_nodes[sample_index][k].tokens
+                                    + [next_tokens[sample_index][i].item()],
+                                    score=batch_best_nodes[sample_index][k].score
+                                    + logits[sample_index][i].item(),
+                                )
+                                for i in range(self.beam_width)
+                            ]
+                batch_best_nodes = next_nodes  # Update beams for the next time step
+
+            batch_predictions = []
+            for sample_nodes in batch_best_nodes:
+                best_node = max(
+                    sample_nodes,
+                    key=lambda node: self.beam_nodes_ordering_function(
+                        node,
+                        self.eos_token_id,
+                        self.length_penalty,
+                    ),
+                )
+                batch_predictions.append(best_node.tokens)
+            outputs += batch_predictions
+        return outputs
