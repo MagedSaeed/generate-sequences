@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [v0.0.9](https://github.com/MagedSaeed/generate-sequences/releases/tag/v0.0.9) - 2024-06-25
+
+### Added
+
+- Add decoder-only generation.
+- Add tests for decoder-only generation.
+- Add a notebook to showcase decoder-only generation.
+
+### Changed
+- Restructuring the package, generate now is a subpackage istead of being a file.
+- Restructure the notebooks into a folder with different notebooks for each generation architecture.
+
+### Fixed
+- Update tests to fix huggingface warnings.
+- Fixed issues related to mypy in pre-commit.
+
 ## [v0.0.8](https://github.com/MagedSaeed/generate-sequences/releases/tag/v0.0.8) - 2024-05-19
 
 ### Added
