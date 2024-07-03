@@ -48,7 +48,7 @@ class BeamSearchGenerator(BaseGenerator):
         top_k_sampling: int = 0,
         top_p_sampling: float = 0.0,
         multinomial_sampling: bool = False,
-        sort_encoder_inputs: bool = False,
+        sort_inputs_by_size: bool = False,
         beam_width: int = 4,
         length_penalty: float = 1.0,
         beam_nodes_ordering_function: Callable[
@@ -67,7 +67,7 @@ class BeamSearchGenerator(BaseGenerator):
             top_k_sampling,
             top_p_sampling,
             multinomial_sampling,
-            sort_encoder_inputs,
+            sort_inputs_by_size,
         )
         self.beam_width = beam_width
         self.length_penalty = length_penalty

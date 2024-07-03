@@ -27,7 +27,7 @@ class BaseGenerator:
         top_k_sampling: int = 0,
         top_p_sampling: float = 0.0,
         multinomial_sampling: bool = False,
-        sort_encoder_inputs: bool = False,
+        sort_inputs_by_size: bool = False,
     ) -> None:
         self.device = device
         self.use_tqdm = use_tqdm
@@ -40,13 +40,13 @@ class BaseGenerator:
         self.top_k_sampling = top_k_sampling
         self.top_p_sampling = top_p_sampling
         self.multinomial_sampling = multinomial_sampling
-        self.sort_encoder_inputs = sort_encoder_inputs
+        self.sort_inputs_by_size = sort_inputs_by_size
 
     def get_batches(
         self, inputs: Union[torch.Tensor, List[torch.Tensor], List[str]]
     ) -> Iterator[Union[torch.Tensor, List[torch.Tensor], List[str]]]:
         batched_inputs = inputs
-        if self.sort_encoder_inputs:
+        if self.sort_inputs_by_size:
             sorted_inputs, inputs_positions = sort_list_with_positions(inputs)
             self._inputs_original_positions = inputs_positions
             batched_inputs = sorted_inputs
@@ -60,7 +60,7 @@ class BaseGenerator:
             yield batched_inputs[i : i + self.batch_size]
 
     def restore_outputs_order(self, outputs):
-        if not self.sort_encoder_inputs:
+        if not self.sort_inputs_by_size:
             return outputs
         ordered_outputs = []
         for position in self._inputs_original_positions:
