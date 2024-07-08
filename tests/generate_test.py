@@ -115,7 +115,7 @@ def test_greedy_generate():
 
 
 def test_greedy_generate_with_sorted_samples():
-    greedy_generator.sort_encoder_inputs = True
+    greedy_generator.sort_inputs_by_size = True
     generated_sequences = tokenizer.batch_decode(
         greedy_generator.generate(input_texts),
         skip_special_tokens=True,
