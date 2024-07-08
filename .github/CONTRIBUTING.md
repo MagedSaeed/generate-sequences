@@ -163,6 +163,4 @@ When you're ready to contribute code to address an open issue, please follow the
 
 ### Writing docstrings
 
-We use [Sphinx](https://www.sphinx-doc.org/en/master/index.html) to build our API docs, which automatically parses all docstrings
-of public classes and methods using the [autodoc](https://www.sphinx-doc.org/en/master/usage/extensions/autodoc.html) extension.
-Please refer to autoc's documentation to learn about the docstring syntax.
+We use [MkDocs-Material](https://squidfunk.github.io/mkdocs-material/) to build our API docs.

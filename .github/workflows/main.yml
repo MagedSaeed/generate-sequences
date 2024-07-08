@@ -62,7 +62,7 @@ jobs:
           - python: "3.10"
             task:
               name: Docs
-              run: cd docs && make html
+              run: mkdocs gh-deploy --force
 
     steps:
       - uses: actions/checkout@v4

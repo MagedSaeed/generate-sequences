@@ -7,11 +7,25 @@ edit_uri: edit/master/docs/docs
 
 ### Build settings ###
 
+nav:
+  - Getting Started:
+      - 'Getting Started.ipynb'
+  - Examples:
+      - Encder-Decoder architecture: 'examples/huggingface_encoder_decoder.ipynb'
+      - Decoder-Only architecture: 'examples/hugginface_decoder_only.ipynb'
+  - ChangeLog: 'CHANGELOG.md'
+
 theme:
   name: material
   features:
     - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.instant
+    - navigation.instant.preview
+    - navigation.instant.prefetch
+    - navigation.instant.progress
     - navigation.sections
+    - navigation.path
     - toc.integrate
     - navigation.top
     - search.suggest
@@ -37,6 +51,7 @@ theme:
 plugins:
   - social
   - search
+  - mkdocs-jupyter
 
 extra:
   social:
