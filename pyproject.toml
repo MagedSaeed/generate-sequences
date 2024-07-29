@@ -50,7 +50,7 @@ dev = [
   # "sphinx-autobuild==2021.3.14",
   # "sphinx-autodoc-typehints==2.0.0",
   "packaging",
-  "pre-commit==3.5.0",
+  "pre-commit==3.8.0",
   # added for testing
   "evaluate==0.4.*",
   "sacrebleu==2.4.*",
