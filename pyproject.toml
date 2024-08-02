@@ -56,7 +56,7 @@ dev = [
   "sacrebleu==2.4.*",
   "sacremoses==0.1.*",
   "sentencepiece==0.2.*",
-  "transformers>=4.42.3,<4.43",
+  "transformers>=4.42.3,<4.44",
   # added for docs
   "mkdocs==1.6.*",
   "mkdocs-material==9.5.*",
