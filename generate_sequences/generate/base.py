@@ -1,4 +1,4 @@
-from typing import Callable, Iterable, Iterator, List, Optional, Union
+from typing import Callable, Iterable, Iterator, List, Optional, Tuple, Union
 
 import torch
 import torch.nn.functional as F
@@ -28,6 +28,7 @@ class BaseGenerator:
         top_p_sampling: float = 0.0,
         multinomial_sampling: bool = False,
         sort_inputs_by_size: bool = False,
+        return_logits: bool = False,  # New parameter
     ) -> None:
         self.device = device
         self.use_tqdm = use_tqdm
@@ -41,6 +42,7 @@ class BaseGenerator:
         self.top_p_sampling = top_p_sampling
         self.multinomial_sampling = multinomial_sampling
         self.sort_inputs_by_size = sort_inputs_by_size
+        self.return_logits = return_logits  # New attribute
 
     def get_batches(
         self, inputs: Union[torch.Tensor, List[torch.Tensor], List[str]]
@@ -101,10 +103,10 @@ class BaseGenerator:
                 torch.exp(logits),
                 num_samples=num_tokens,
             )
-            logits = logits.gather(-1, next_tokens)
+            tokens_logits = logits.gather(-1, next_tokens)
         else:
-            logits, next_tokens = torch.topk(logits, num_tokens)
-        return logits, next_tokens
+            tokens_logits, next_tokens = torch.topk(logits, num_tokens)
+        return tokens_logits, next_tokens
 
     @torch.no_grad()
     def generate(
@@ -118,7 +120,7 @@ class BaseGenerator:
         ] = None,
         pad_decoder_inputs: Optional[int] = None,
         decoder_inputs_padding_side: Optional[str] = "left",
-    ) -> List[torch.Tensor]:
+    ) -> Union[List[torch.Tensor], List[Tuple[torch.Tensor, torch.Tensor]]]:
         # assert either encoder_inputs or decoder_inputs is not None
         assert (
             encoder_inputs is not None or decoder_inputs is not None
@@ -128,7 +130,7 @@ class BaseGenerator:
             raise UserWarning(
                 "Both encoder_inputs and decoder_inputs are provided. Generally, this is not a standard practice unless you know what you are doing!"
             )
-        # assert decoder_inputs is 2d tensors or list of 1d tensors or integers
+            # assert decoder_inputs is 2d tensors or list of 1d tensors or integers
         if decoder_inputs is not None:
             if isinstance(decoder_inputs, torch.Tensor):
                 assert decoder_inputs.dim() == 2, "decoder_inputs must be a 2D tensor"
@@ -156,7 +158,7 @@ class BaseGenerator:
                 pad_with=pad_decoder_inputs,
                 padding_side=decoder_inputs_padding_side,
             )
-        outputs: List[torch.Tensor] = []
+        outputs: Union[List[torch.Tensor], List[Tuple[torch.Tensor, torch.Tensor]]] = []
         if encoder_inputs:
             outputs = self._encoder_decoder_generate(encoder_inputs)
         else:
