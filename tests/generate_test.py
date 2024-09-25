@@ -135,7 +135,7 @@ def test_greedy_generate_with_sampling():
     prev_sampling = greedy_generator.multinomial_sampling
     prev_temp = greedy_generator.temperature
     greedy_generator.multinomial_sampling = True
-    beam_search_generator.temperature = 0.95
+    greedy_generator.temperature = 0.95
     greedy_generator.top_p_sampling = 0.9
     greedy_generator.top_k_sampling = 10
     generated_sequences = tokenizer.batch_decode(
@@ -264,3 +264,119 @@ def test_gpt2_beam_search_generate():
     assert all(len(result) == MAX_LENGTH for result in results)
     # for debugging:
     # print(gpt2_tokenizer.batch_decode(results, skip_special_tokens=True))
+
+
+def test_greedy_generate_with_logits():
+    greedy_generator.return_logits = True
+    generated_sequences = greedy_generator.generate(input_texts)
+
+    assert len(generated_sequences) == len(input_texts)
+    for (seq, logits), input_text in zip(generated_sequences, input_texts):
+        assert isinstance(seq, torch.Tensor)
+        assert isinstance(logits, list)
+        assert len(logits) > 0
+        assert all(isinstance(token, int) and isinstance(logit, float) for token, logit in logits)
+        assert len(seq) == len(logits)  # for the bos token
+
+    # Check if the generated sequences (without logits) still have a reasonable BLEU score
+    sequences_only = [seq for seq, _ in generated_sequences]
+    decoded_sequences = tokenizer.batch_decode(sequences_only, skip_special_tokens=True)
+    bleu_score = bleu_scorer.compute(predictions=decoded_sequences, references=targets)["score"]
+    assert 0 < bleu_score < 100  # Ensure we get a valid BLEU score
+
+    greedy_generator.return_logits = False  # Reset for other tests
+
+
+def test_beam_search_generate_with_logits():
+    beam_search_generator.return_logits = True
+    generated_sequences = beam_search_generator.generate(input_texts)
+
+    assert len(generated_sequences) == len(input_texts)
+    for (seq, logits), input_text in zip(generated_sequences, input_texts):
+        assert isinstance(seq, torch.Tensor)
+        assert isinstance(logits, list)
+        assert len(logits) > 0
+        assert all(isinstance(token, int) and isinstance(logit, float) for token, logit in logits)
+        assert len(logits) == len(seq), f"Expected {len(seq)} logits, got {len(logits)}"
+
+        # In beam search, EOS tokens might have non-zero logits, so we don't check for that
+
+    # Check if the generated sequences (without logits) still have a reasonable BLEU score
+    sequences_only = [seq for seq, _ in generated_sequences]
+    decoded_sequences = tokenizer.batch_decode(sequences_only, skip_special_tokens=True)
+    bleu_score = bleu_scorer.compute(predictions=decoded_sequences, references=targets)["score"]
+    assert 0 < bleu_score < 100  # Ensure we get a valid BLEU score
+
+    beam_search_generator.return_logits = False  # Reset for other tests
+
+
+def test_gpt2_greedy_generate_with_logits():
+    gpt2_greedy_generator.return_logits = True
+    prompts = [
+        "Once upon a time,",
+        "In a galaxy far, far away,",
+        "It was a dark and stormy night,",
+        "The quick brown fox",
+    ]
+    input_ids = [
+        gpt2_tokenizer(prompt, return_tensors="pt").to(DEVICE).input_ids.squeeze()
+        for prompt in prompts
+    ]
+    generated_sequences = gpt2_greedy_generator.generate(
+        encoder_inputs=None,
+        decoder_inputs=input_ids,
+        pad_decoder_inputs=gpt2_tokenizer.eos_token_id,
+    )
+
+    assert len(generated_sequences) == len(prompts)
+    for (seq, logits), input_ids in zip(generated_sequences, input_ids):
+        assert isinstance(seq, torch.Tensor)
+        assert isinstance(logits, list)
+        assert len(logits) > 0
+        assert all(isinstance(token, int) and isinstance(logit, float) for token, logit in logits)
+        assert len(logits) == len(seq), f"Expected {len(seq)} logits, got {len(logits)}"
+
+    # Check if the generated sequences are valid continuations
+    sequences_only = [seq for seq, _ in generated_sequences]
+    decoded_sequences = gpt2_tokenizer.batch_decode(sequences_only, skip_special_tokens=True)
+    for prompt, continuation in zip(prompts, decoded_sequences):
+        assert continuation.startswith(prompt)
+        assert len(continuation) > len(prompt)
+
+    gpt2_greedy_generator.return_logits = False  # Reset for other tests
+
+
+# The beam search test for GPT-2 remains largely unchanged as EOS tokens might have non-zero logits in beam search
+def test_gpt2_beam_search_generate_with_logits():
+    gpt2_beam_search_generator.return_logits = True
+    prompts = [
+        "Once upon a time,",
+        "In a galaxy far, far away,",
+        "It was a dark and stormy night,",
+        "The quick brown fox",
+    ]
+    input_ids = [
+        gpt2_tokenizer(prompt, return_tensors="pt").to(DEVICE).input_ids.squeeze()
+        for prompt in prompts
+    ]
+    generated_sequences = gpt2_beam_search_generator.generate(
+        encoder_inputs=None,
+        decoder_inputs=input_ids,
+        pad_decoder_inputs=gpt2_tokenizer.eos_token_id,
+    )
+
+    assert len(generated_sequences) == len(prompts)
+    for (seq, logits), input_ids in zip(generated_sequences, input_ids):
+        assert isinstance(seq, torch.Tensor)
+        assert isinstance(logits, list)
+        assert len(logits) > 0
+        assert all(isinstance(token, int) and isinstance(logit, float) for token, logit in logits)
+        assert len(logits) == len(seq), f"Expected {len(seq)} logits, got {len(logits)}"
+
+    # Check if the generated sequences are valid continuations
+    sequences_only = [seq for seq, _ in generated_sequences]
+    decoded_sequences = gpt2_tokenizer.batch_decode(sequences_only, skip_special_tokens=True)
+    for prompt, continuation in zip(prompts, decoded_sequences):
+        assert continuation.startswith(prompt)
+        assert len(continuation) > len(prompt)
+    gpt2_beam_search_generator.return_logits = False  # Reset for other tests
