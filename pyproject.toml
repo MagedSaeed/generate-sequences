@@ -112,6 +112,7 @@ target-version = "py39"
 ignore_missing_imports = true
 no_site_packages = true
 check_untyped_defs = true
+exclude = ['doc']
 
 [[tool.mypy.overrides]]
 module = "tests.*"
