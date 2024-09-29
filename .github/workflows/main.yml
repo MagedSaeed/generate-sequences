@@ -44,7 +44,7 @@ jobs:
           - python: "3.10"
             task:
               name: Type check
-              run: mypy .
+              run: mypy --config-file pyproject.toml .
 
           - python: "3.10"
             task:
