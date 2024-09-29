@@ -112,7 +112,11 @@ target-version = "py39"
 ignore_missing_imports = true
 no_site_packages = true
 check_untyped_defs = true
-exclude = ['docs']
+exclude = [
+    '^docs/',  # Exclude the docs directory
+    '^build/',  # It's also good to exclude build artifacts
+    '^dist/'   # And distribution artifacts
+]
 
 [[tool.mypy.overrides]]
 module = "tests.*"
