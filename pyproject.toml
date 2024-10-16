@@ -62,7 +62,7 @@ dev = [
   "mkdocs-material==9.5.*",
   "pillow>=10.3,<10.5",
   "cairosvg==2.7.*",
-  "mkdocs-jupyter==0.24.*",
+  "mkdocs-jupyter>=0.24,<0.26",
 ]
 
 [tool.setuptools.packages.find]
