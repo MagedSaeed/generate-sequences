@@ -77,7 +77,13 @@ pip install -e .
 ```
 # 💡 Usage
 
-First, you need to tell the package how it should generate from your model:
+First, import the generators:
+
+```python
+from generate_sequences import GreedyGenerator, BeamSearchGenerator
+```
+
+then, you need to tell the package how it should generate from your model:
 
 ```python
 encoder_outputs = {}
@@ -111,13 +117,11 @@ def generate(inputs, decoder_input_ids):
     return model_outputs.logits
 ```
 
-Then, you can do greey-search or beam-search generation as follows:
+Then, you can do greedy-search or beam-search generation as follows:
 
 - Greedy Search
 
 ```python
-from src.generators.greedy_search import GreedySearch
-
 greedy_sequences_generator = GreedyGenerator(
     use_tqdm=True,
     sort_inputs_by_size=True,
@@ -136,8 +140,6 @@ len(input_texts), len(predictions), len(targets)
 - Beam Search
 
 ```python
-from src.generators.beam_search import BeamSearch
-
 beam_search_sequences_generator = BeamSearchGenerator(
     beam_width=4,
     use_tqdm=True,
