@@ -79,7 +79,7 @@ pip install -e .
 
 First, you need to tell the package how it should generate from your model:
 
-```
+```python
 encoder_outputs = {}
 
 
