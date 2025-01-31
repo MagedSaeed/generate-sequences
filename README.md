@@ -76,25 +76,84 @@ cd generate-sequences
 pip install -e .
 ```
 # 💡 Usage
-Here’s a quick example of how to use Generate Sequences:
+
+First, you need to tell the package how it should generate from your model:
+
+```
+encoder_outputs = {}
+
+
+def generate(inputs, decoder_input_ids):
+    global encoder_outputs
+    tokenizer_results = tokenizer(
+        inputs,
+        return_tensors="pt",
+        padding=True,
+    )
+    if not encoder_outputs.get(json.dumps(inputs)):
+        input_ids, attention_mask = (
+            tokenizer_results["input_ids"],
+            tokenizer_results["attention_mask"],
+        )
+        encoder_outputs[json.dumps(inputs)] = model.get_encoder()(
+            input_ids.repeat_interleave(
+                model.generation_config.num_beams,
+                dim=0,
+            ),
+            return_dict=True,
+            attention_mask=attention_mask,
+        )
+    model_outputs = model(
+        **tokenizer_results,
+        decoder_input_ids=decoder_input_ids,
+        encoder_outputs=encoder_outputs[json.dumps(inputs)],
+    )
+    return model_outputs.logits
+```
+
+Then, you can do greey-search or beam-search generation as follows:
 
 - Greedy Search
 
 ```python
 from src.generators.greedy_search import GreedySearch
 
-generator = GreedySearch(model, tokenizer)
-sequence = generator.generate(input_ids, max_length=50)
-print(sequence)
+greedy_sequences_generator = GreedyGenerator(
+    use_tqdm=True,
+    sort_inputs_by_size=True,
+    device=model.device,
+    generation_forward=generate,
+    batch_size=model.generation_config.batch_size,
+    max_length=model.generation_config.max_length,
+    eos_token_id=model.generation_config.eos_token_id,
+    decoder_start_token_id=model.generation_config.decoder_start_token_id,
+)
+
+prediction_ids = greedy_sequences_generator.generate(input_texts)
+predictions = tokenizer.batch_decode(prediction_ids, skip_special_tokens=True)
+len(input_texts), len(predictions), len(targets)
 ```
 - Beam Search
 
 ```python
 from src.generators.beam_search import BeamSearch
 
-generator = BeamSearch(model, tokenizer, num_beams=5)
-sequence = generator.generate(input_ids, max_length=50)
-print(sequence)
+beam_search_sequences_generator = BeamSearchGenerator(
+    beam_width=4,
+    use_tqdm=True,
+    length_penalty=0.6,
+    device=model.device,
+    sort_inputs_by_size=True,
+    generation_forward=generate,
+    batch_size=model.generation_config.batch_size,
+    max_length=model.generation_config.max_length,
+    eos_token_id=model.generation_config.eos_token_id,
+    decoder_start_token_id=model.generation_config.decoder_start_token_id,
+)
+
+prediction_ids = beam_search_sequences_generator.generate(input_texts)
+predictions = tokenizer.batch_decode(prediction_ids, skip_special_tokens=True)
+len(input_texts), len(predictions), len(targets)
 ```
 Customizing Parameters
 Both GreedySearch and BeamSearch allow you to customize decoding parameters, such as max_length and num_beams, to tailor the generation process to your needs.
