@@ -95,11 +95,7 @@ def generate(inputs, decoder_input_ids):
         return_tensors="pt",
         padding=True,
     )
-    model_outputs = model(
-        **tokenizer_results,
-        decoder_input_ids=decoder_input_ids,
-        encoder_outputs=encoder_outputs[json.dumps(inputs)],
-    )
+    model_outputs = model(**tokenizer_results)
     return model_outputs.logits
 ```
 
