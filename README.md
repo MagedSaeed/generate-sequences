@@ -1,24 +1,24 @@
 # 🔢 Generate Sequences
-A Python library for generating sequences with support for greedy search, beam search, and customizable configurations.
 
-This package generates sequences from deep learning architectures developed with pytorch. It can generate in a greedy nature or using beam search. It can generate from both decoder-only, or encoder-decoder architectures.
+`generate-sequences` is a Python library for generating sequences from deep learning architectures with support for greedy search, beam search, and customizable configurations.
 
+This package generates sequences from architectures developed with PyTorch. It can generate in a greedy manner or using beam search. It can generate from both decoder-only and encoder-decoder architectures.
 
-- Introduction and Getting Started: <https://magedsaeed.github.io/generate-sequences/Getting%20Started>
-
-- Examples: <https://magedsaeed.github.io/generate-sequences/examples/huggingface_encoder_decoder>
-
-- ChangeLog: <https://magedsaeed.github.io/generate-sequences/CHANGELOG>
-
+- **Introduction and Getting Started**: This README.md, also: <https://magedsaeed.github.io/generate-sequences/Getting%20Started>
+- **Examples**: <https://magedsaeed.github.io/generate-sequences/examples/huggingface_encoder_decoder>
+- **ChangeLog**: <https://magedsaeed.github.io/generate-sequences/CHANGELOG>
 
 # 🚀 Introduction
-Welcome to Generate Sequences, a robust Python package designed for generating high-quality sequences using popular decoding strategies. Whether you're working on text generation, machine translation, or any task requiring sequence decoding, this library provides a simple yet powerful interface to implement and customize your sequence generation pipelines.
+Welcome to Generate Sequences, a Python package designed for generating sequences using popular decoding strategies. Whether the system is a text generation, language modeling, machine translation, or any task requiring sequence decoding, this library provides a simple interface to implement and customize the sequence generation pipelines.
+
+# 🎯 Motivation
+Hugging Face’s `model.generate` method is a great tool for generating sequences from LLMs. However, in order to use this method, the developed model needs to be a Hugging Face model adhering to specific constraints depending on the model architecture. This package generalizes that approach by introducing a `generation_forward` method, where you specify how the model outputs sequences (this is the part that differs from model to model). Other parts are standardized across both beam search and greedy search. Additionally, this package supports popular generation methods such as sampling, temperature, top-p sampling, and top-k sampling.
 
 # ✨ Features
-Greedy Search: Quickly generate sequences by selecting the most probable token at each step.
-Beam Search: Explore multiple hypotheses to generate the best possible sequence.
-Custom Configurations: Fine-tune decoding parameters to suit your specific task.
-Lightweight & Modular: Easy-to-read code designed with flexibility in mind.
+- **Greedy Search**: Generate sequences by selecting the most probable token at each step.
+- **Beam Search**: Explore multiple hypotheses to generate the best possible sequence.
+- **Custom Configurations**: Fine-tune decoding parameters to suit your specific task.
+- **Lightweight & Modular**: Easy-to-read code designed with flexibility in mind.
 
 # 📂 Directory Structure
 
@@ -68,13 +68,14 @@ The package is installable through pip:
 pip install -U generate-sequences
 ```
 
-You can also install the package from the latest commit on git by cloning the repository, then install:
+You can also install the package from the latest commit on GitHub by cloning the repository and installing it manually:
 
 ```bash
 git clone https://github.com/MagedSaeed/generate-sequences.git
 cd generate-sequences
 pip install -e .
 ```
+
 # 💡 Usage
 
 First, import the generators:
@@ -83,11 +84,29 @@ First, import the generators:
 from generate_sequences import GreedyGenerator, BeamSearchGenerator
 ```
 
-then, you need to tell the package how it should generate from your model:
+Then, specify how the package should generate from your model given the encoder and decoder inputs and returns the model logits. This method takes as an argument the encoder `inputs` (can be None for decoder-only architecture) and the decoder `decoder_input_ids` at a given time step.
+
+This method This can be as simple as:
+
+```python
+def generate(inputs, decoder_input_ids):
+    tokenizer_results = tokenizer(
+        inputs,
+        return_tensors="pt",
+        padding=True,
+    )
+    model_outputs = model(
+        **tokenizer_results,
+        decoder_input_ids=decoder_input_ids,
+        encoder_outputs=encoder_outputs[json.dumps(inputs)],
+    )
+    return model_outputs.logits
+```
+
+Or more advanced with caching mechanism in encoder-decoder architectures where the encoder outputs are cached:
 
 ```python
 encoder_outputs = {}
-
 
 def generate(inputs, decoder_input_ids):
     global encoder_outputs
@@ -117,9 +136,9 @@ def generate(inputs, decoder_input_ids):
     return model_outputs.logits
 ```
 
-Then, you can do greedy-search or beam-search generation as follows:
+Then, you can perform greedy search or beam search as follows:
 
-- Greedy Search
+- **Greedy Search**
 
 ```python
 greedy_sequences_generator = GreedyGenerator(
@@ -135,9 +154,9 @@ greedy_sequences_generator = GreedyGenerator(
 
 prediction_ids = greedy_sequences_generator.generate(input_texts)
 predictions = tokenizer.batch_decode(prediction_ids, skip_special_tokens=True)
-len(input_texts), len(predictions), len(targets)
 ```
-- Beam Search
+
+- **Beam Search**
 
 ```python
 beam_search_sequences_generator = BeamSearchGenerator(
@@ -155,10 +174,7 @@ beam_search_sequences_generator = BeamSearchGenerator(
 
 prediction_ids = beam_search_sequences_generator.generate(input_texts)
 predictions = tokenizer.batch_decode(prediction_ids, skip_special_tokens=True)
-len(input_texts), len(predictions), len(targets)
 ```
-Customizing Parameters
-Both GreedySearch and BeamSearch allow you to customize decoding parameters, such as max_length and num_beams, to tailor the generation process to your needs.
 
 # 🧪 Running Tests
 Ensure everything works as expected by running the unit tests:
@@ -168,21 +184,26 @@ pytest tests/
 ```
 
 # 📖 Documentation
-Getting Started: Check out docs/Getting Started.ipynb for a step-by-step guide.
-Examples: Notebooks demonstrating integration with Hugging Face models are available in `docs/examples/`
+- **Getting Started**: Check out `docs/Getting Started.ipynb` for a step-by-step guide.
+- **Examples**: Notebooks demonstrating integration with Hugging Face models are available in `docs/examples/`
+
+# 📜 ChangeLog
+You can find a detailed list of changes and updates in the [ChangeLog](https://magedsaeed.github.io/generate-sequences/CHANGELOG). This document keeps track of new features, bug fixes, and other improvements.
 
 # 🤝 Contributing
 Contributions are welcome! To contribute:
 
-- Fork the repository.
-- Create a new branch (`git checkout -b feature-name`).
-- Commit your changes (`git commit -m "Add feature"`).
-- Push to the branch (`git push origin feature-name`).
-- Open a pull request.
+1. Fork the repository.
+2. Create a new branch (`git checkout -b feature-name`).
+3. Commit your changes (`git commit -m "Add feature"`).
+4. Push to the branch (`git push origin feature-name`).
+5. Open a pull request.
+
 Please ensure your code follows the existing style and includes appropriate tests.
 
 # 🛡️ License
 This project is licensed under the MIT License. See the LICENSE file for details.
 
 # 🌟 Acknowledgments
-Special thanks to the open-source community for inspiring this project. 🙌
+Special thanks to the open-source community for inspiring this project 🙌.
+
