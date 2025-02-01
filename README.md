@@ -84,7 +84,7 @@ First, import the generators:
 from generate_sequences import GreedyGenerator, BeamSearchGenerator
 ```
 
-Then, specify how the package should generate from your model given the encoder and decoder inputs and returns the model logits. This method takes as an argument the encoder `inputs` (can be None for decoder-only architecture) and the decoder `decoder_input_ids` at a given time step.
+Then, specify how the package should generate from your model given the encoder and decoder inputs and return the model logits. This method takes as an argument the encoder `inputs` (can be None for decoder-only architecture) and the decoder `decoder_input_ids` at a given time step.
 
 This method This can be as simple as:
 
@@ -99,7 +99,7 @@ def generate(inputs, decoder_input_ids):
     return model_outputs.logits
 ```
 
-Or more advanced with caching mechanism in encoder-decoder architectures where the encoder outputs are cached:
+Or more advanced with a caching mechanism in encoder-decoder architectures where the encoder outputs are cached:
 
 ```python
 encoder_outputs = {}
@@ -180,7 +180,11 @@ pytest tests/
 ```
 
 # 📖 Documentation
-You can explore the full docs here: https://magedsaeed.github.io/generate-sequences. You can also navigate through the repository to: 
+You can explore the full docs here: https://magedsaeed.github.io/generate-sequences.
+
+Docs were built using this great material-mkdocs template: https://squidfunk.github.io/mkdocs-material/.
+
+You can also navigate through the repository to: 
 - **Getting Started**: Check out `docs/Getting Started.ipynb` for a step-by-step guide.
 - **Examples**: Notebooks demonstrating integration with Hugging Face models are available in `docs/examples/`
 
