@@ -78,6 +78,8 @@ pip install -e .
 
 # 💡 Usage
 
+You can always go to the getting-started page here: https://magedsaeed.github.io/generate-sequences/Getting%20Started/. However, this provides a TLDR overview of how the package works.
+
 First, import the generators:
 
 ```python
@@ -86,7 +88,7 @@ from generate_sequences import GreedyGenerator, BeamSearchGenerator
 
 Then, specify how the package should generate from your model given the encoder and decoder inputs and return the model logits. This method takes as an argument the encoder `inputs` (can be None for decoder-only architecture) and the decoder `decoder_input_ids` at a given time step.
 
-This method This can be as simple as:
+This method can be as simple as:
 
 ```python
 def generate(inputs, decoder_input_ids):
@@ -132,7 +134,7 @@ def generate(inputs, decoder_input_ids):
     return model_outputs.logits
 ```
 
-Then, you can perform greedy search or beam search as follows:
+Then, you can perform a greedy search or beam search as follows:
 
 - **Greedy Search**
 
