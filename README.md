@@ -205,7 +205,7 @@ Contributions are welcome! To contribute:
 Please ensure your code follows the existing style and includes appropriate tests.
 
 # 🛡️ License
-This project is licensed under the MIT License. See the LICENSE file for details.
+This project is licensed under the Apache License. See the LICENSE file for details.
 
 # 🌟 Acknowledgments
 Special thanks to the open-source community for inspiring this project 🙌. I want to give the credit here to Allen AI Python Package Template (https://github.com/allenai/python-package-template), which provides excellent functionality including GitHub Actions with automated testing and PyPI deployments.
