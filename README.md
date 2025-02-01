@@ -180,6 +180,7 @@ pytest tests/
 ```
 
 # 📖 Documentation
+You can explore the full docs here: https://magedsaeed.github.io/generate-sequences. You can also navigate through the repository to: 
 - **Getting Started**: Check out `docs/Getting Started.ipynb` for a step-by-step guide.
 - **Examples**: Notebooks demonstrating integration with Hugging Face models are available in `docs/examples/`
 
