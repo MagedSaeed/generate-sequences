@@ -2,7 +2,7 @@
 
 `generate-sequences` is a Python library for generating sequences from deep learning architectures with support for greedy search, beam search, and customizable configurations.
 
-This package generates sequences from architectures developed with PyTorch. It can generate in a greedy manner or using beam search. It can generate from both decoder-only and encoder-decoder architectures.
+This package generates sequences from architectures developed with PyTorch. It can `generate` in a greedy manner or using beam search. It can `generate` from both decoder-only and encoder-decoder architectures.
 
 - **Introduction and Getting Started**: This README.md, also: <https://magedsaeed.github.io/generate-sequences/Getting%20Started>
 - **Examples**: <https://magedsaeed.github.io/generate-sequences/examples/huggingface_encoder_decoder>
