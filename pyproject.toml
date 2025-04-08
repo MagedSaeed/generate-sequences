@@ -59,7 +59,7 @@ dev = [
   "transformers>=4.42.3,<4.49",
   # added for docs
   "mkdocs==1.6.*",
-  "mkdocs-material==9.5.*",
+  "mkdocs-material>=9.5,<9.7",
   "pillow>=10.3,<11.2",
   "cairosvg==2.7.*",
   "mkdocs-jupyter>=0.24,<0.26",
