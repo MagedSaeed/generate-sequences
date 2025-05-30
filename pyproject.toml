@@ -33,7 +33,7 @@ Changelog = "https://github.com/MagedSaeed/generate-sequences/blob/main/CHANGELO
 [project.optional-dependencies]
 dev = [
   "ruff",
-  "mypy>=1.0,<1.16",
+  "mypy>=1.0,<1.17",
   "black>=23.0,<26.0",
   "isort>=5.12,<6.1",
   "pytest",
