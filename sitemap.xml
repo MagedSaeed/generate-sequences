@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+    <url>
+         <loc>https://magedsaeed.github.io/generate-sequences/</loc>
+         <lastmod>2025-07-02</lastmod>
+    </url>
+    <url>
+         <loc>https://magedsaeed.github.io/generate-sequences/CHANGELOG/</loc>
+         <lastmod>2025-07-02</lastmod>
+    </url>
+    <url>
+         <loc>https://magedsaeed.github.io/generate-sequences/Getting%20Started/</loc>
+         <lastmod>2025-07-02</lastmod>
+    </url>
+    <url>
+         <loc>https://magedsaeed.github.io/generate-sequences/examples/hugginface_decoder_only/</loc>
+         <lastmod>2025-07-02</lastmod>
+    </url>
+    <url>
+         <loc>https://magedsaeed.github.io/generate-sequences/examples/huggingface_encoder_decoder/</loc>
+         <lastmod>2025-07-02</lastmod>
+    </url>
+</urlset>
